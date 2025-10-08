@@ -1,0 +1,4 @@
+name,company,email,phone,linkedin,website,clutch,notes
+John Smith,Acme Corp,john.smith@acme.com,+1-555-0123,https://linkedin.com/in/johnsmith,https://acme.com,https://clutch.co/profile/acme-corp,Interested in our services
+Jane Doe,Tech Solutions,jane@techsolutions.com,+1-555-0456,https://linkedin.com/in/janedoe,https://techsolutions.com,,Looking for web development
+Bob Johnson,Startup Inc,bob@startup.com,+1-555-0789,https://linkedin.com/in/bobjohnson,https://startup.com,https://clutch.co/profile/startup-inc,Need mobile app development
