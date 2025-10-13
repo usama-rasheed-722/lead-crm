@@ -95,6 +95,20 @@ try {
             'duplicate_status' => 'unique',
             'notes' => 'Need e-commerce platform development',
             'created_by' => 3
+        ],
+        [
+            'lead_id' => '', // No SDR number - for testing
+            'name' => 'Alice Wilson',
+            'company' => 'Digital Agency',
+            'email' => 'alice@digitalagency.com',
+            'phone' => '+1-555-0321',
+            'linkedin' => 'https://linkedin.com/in/alicewilson',
+            'website' => 'https://digitalagency.com',
+            'clutch' => '',
+            'sdr_id' => 3,
+            'duplicate_status' => 'incomplete',
+            'notes' => 'Needs SDR number generation',
+            'created_by' => 3
         ]
     ];
     

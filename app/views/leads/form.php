@@ -88,6 +88,13 @@
                                    placeholder="https://clutch.co/profile/company">
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="job_title" class="form-label">Job Title</label>
+                            <input type="text" class="form-control" id="job_title" name="job_title" 
+                                   value="<?= htmlspecialchars($lead['job_title'] ?? '') ?>">
+                        </div>
+                    </div>
                     <?php if (auth_user()['role'] === 'admin'): ?>
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -106,6 +113,108 @@
                         </div>
                     </div>
                     <?php endif; ?>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="industry" class="form-label">Industry</label>
+                            <input type="text" class="form-control" id="industry" name="industry" 
+                                   value="<?= htmlspecialchars($lead['industry'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="lead_source" class="form-label">Lead Source</label>
+                            <input type="text" class="form-control" id="lead_source" name="lead_source" 
+                                   value="<?= htmlspecialchars($lead['lead_source'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="tier" class="form-label">Tier</label>
+                            <input type="text" class="form-control" id="tier" name="tier" 
+                                   value="<?= htmlspecialchars($lead['tier'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="lead_status" class="form-label">Lead Status</label>
+                            <input type="text" class="form-control" id="lead_status" name="lead_status" 
+                                   value="<?= htmlspecialchars($lead['lead_status'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <input type="text" class="form-control" id="status" name="status" 
+                                   value="<?= htmlspecialchars($lead['status'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="insta" class="form-label">Instagram</label>
+                            <input type="text" class="form-control" id="insta" name="insta" 
+                                   value="<?= htmlspecialchars($lead['insta'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="social_profile" class="form-label">Social Profile</label>
+                            <input type="text" class="form-control" id="social_profile" name="social_profile" 
+                                   value="<?= htmlspecialchars($lead['social_profile'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" name="address" 
+                                   value="<?= htmlspecialchars($lead['address'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="country" class="form-label">Country</label>
+                            <input type="text" class="form-control" id="country" name="country" 
+                                   value="<?= htmlspecialchars($lead['country'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="whatsapp" class="form-label">Whatsapp</label>
+                            <input type="text" class="form-control" id="whatsapp" name="whatsapp" 
+                                   value="<?= htmlspecialchars($lead['whatsapp'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="next_step" class="form-label">Next Step</label>
+                            <input type="text" class="form-control" id="next_step" name="next_step" 
+                                   value="<?= htmlspecialchars($lead['next_step'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label for="other" class="form-label">Other</label>
+                            <input type="text" class="form-control" id="other" name="other" 
+                                   value="<?= htmlspecialchars($lead['other'] ?? '') ?>">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-3">

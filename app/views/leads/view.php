@@ -5,6 +5,11 @@
         <i class="fas fa-user me-2"></i>Lead Details
     </h2>
     <div>
+        <?php if (empty($lead['lead_id']) || !preg_match('/^SDR\d+-\d+$/', $lead['lead_id'])): ?>
+            <a href="index.php?action=generate_sdr&id=<?= $lead['id'] ?>" class="btn btn-success me-2">
+                <i class="fas fa-hashtag me-2"></i>Generate SDR Number
+            </a>
+        <?php endif; ?>
         <a href="index.php?action=lead_edit&id=<?= $lead['id'] ?>" class="btn btn-outline-primary me-2">
             <i class="fas fa-edit me-2"></i>Edit Lead
         </a>
@@ -13,6 +18,20 @@
         </a>
     </div>
 </div>
+
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-2"></i>
+        <?= htmlspecialchars($_GET['success']) ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <?= htmlspecialchars($_GET['error']) ?>
+    </div>
+<?php endif; ?>
 
 <div class="row">
     <!-- Lead Information -->
@@ -43,6 +62,10 @@
                             <tr>
                                 <td class="fw-bold">Name:</td>
                                 <td><?= htmlspecialchars($lead['name'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Job Title:</td>
+                                <td><?= htmlspecialchars($lead['job_title'] ?: 'N/A') ?></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">Company:</td>
@@ -114,6 +137,54 @@
                                         N/A
                                     <?php endif; ?>
                                 </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Industry:</td>
+                                <td><?= htmlspecialchars($lead['industry'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Lead Source:</td>
+                                <td><?= htmlspecialchars($lead['lead_source'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Tier:</td>
+                                <td><?= htmlspecialchars($lead['tier'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Lead Status:</td>
+                                <td><?= htmlspecialchars($lead['lead_status'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Instagram:</td>
+                                <td><?= htmlspecialchars($lead['insta'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Social Profile:</td>
+                                <td><?= htmlspecialchars($lead['social_profile'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Address:</td>
+                                <td><?= htmlspecialchars($lead['address'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Country:</td>
+                                <td><?= htmlspecialchars($lead['country'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Whatsapp:</td>
+                                <td><?= htmlspecialchars($lead['whatsapp'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Next Step:</td>
+                                <td><?= htmlspecialchars($lead['next_step'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Other:</td>
+                                <td><?= htmlspecialchars($lead['other'] ?: 'N/A') ?></td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Status:</td>
+                                <td><?= htmlspecialchars($lead['status'] ?: 'N/A') ?></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">SDR:</td>

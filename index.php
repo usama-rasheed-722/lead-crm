@@ -61,6 +61,12 @@ switch ($action) {
     case 'lead_delete':
         (new LeadController())->delete($_GET['id'] ?? null);
         break;
+    case 'generate_sdr':
+        (new LeadController())->generateSDR($_GET['id'] ?? null);
+        break;
+    case 'bulk_generate_sdr':
+        (new LeadController())->bulkGenerateSDR();
+        break;
     case 'import':
         (new ImportController())->index();
         break;

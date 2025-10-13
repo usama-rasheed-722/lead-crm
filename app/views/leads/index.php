@@ -7,6 +7,20 @@
     </a>
 </div>
 
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle me-2"></i>
+        <?= htmlspecialchars($_GET['success']) ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <?= htmlspecialchars($_GET['error']) ?>
+    </div>
+<?php endif; ?>
+
 <!-- Search and Filters -->
 <div class="search-form">
     <form method="GET" action="index.php">
@@ -67,8 +81,13 @@
 <!-- Results -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Leads (<?= count($leads) ?> found)</h5>
+        <h5 class="mb-0">Leads (<?= (int)($total ?? count($leads)) ?> found)</h5>
         <div>
+            <?php if (auth_user()['role'] === 'admin'): ?>
+                <a href="index.php?action=bulk_generate_sdr" class="btn btn-sm btn-warning me-2">
+                    <i class="fas fa-hashtag me-1"></i>Generate All SDR Numbers
+                </a>
+            <?php endif; ?>
             <a href="index.php?action=export_csv" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
@@ -83,28 +102,48 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
+                            <th>Date</th>
                             <th>Lead ID</th>
-                            <th>Name</th>
+                            <th>Lead Owner</th>
                             <th>Company</th>
+                            <th>Contact Name</th>
+                            <th>Job Title</th>
                             <th>Email</th>
                             <th>Phone</th>
+                            <th>LinkedIn</th>
                             <th>Website</th>
-                            <th>SDR</th>
+                            <th>Industry</th>
+                            <th>Lead Source</th>
+                            <th>Tier</th>
+                            <th>Lead Status</th>
+                            <th>Clutch Link</th>
+                            <th>Insta</th>
+                            <th>Social Profile</th>
+                            <th>Address</th>
+                            <th>Description Information</th>
+                            <th>Whatsapp</th>
+                            <th>Next Step</th>
+                            <th>Other</th>
                             <th>Status</th>
-                            <th>Date Added</th>
+                            <th>Country</th>
+                            <th>SDR</th>
+                            <th>Duplicate Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($leads as $lead): ?>
                             <tr>
+                                <td><?= date('Y-m-d', strtotime($lead['created_at'])) ?></td>
                                 <td>
                                     <a href="index.php?action=lead_view&id=<?= $lead['id'] ?>" class="text-decoration-none fw-bold">
                                         <?= htmlspecialchars($lead['lead_id']) ?>
                                     </a>
                                 </td>
-                                <td><?= htmlspecialchars($lead['name'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['sdr_name'] ?: 'N/A') ?></td>
                                 <td><?= htmlspecialchars($lead['company'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['name'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['job_title'] ?: 'N/A') ?></td>
                                 <td>
                                     <?php if ($lead['email']): ?>
                                         <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
@@ -124,6 +163,13 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
+                                    <?php if ($lead['linkedin']): ?>
+                                        <a href="<?= htmlspecialchars($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">LinkedIn</a>
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php if ($lead['website']): ?>
                                         <a href="<?= htmlspecialchars($lead['website']) ?>" target="_blank" class="text-decoration-none">
                                             <i class="fas fa-external-link-alt me-1"></i>
@@ -133,27 +179,45 @@
                                         N/A
                                     <?php endif; ?>
                                 </td>
+                                <td><?= htmlspecialchars($lead['industry'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['lead_source'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['tier'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['lead_status'] ?: 'N/A') ?></td>
+                                <td>
+                                    <?php if ($lead['clutch']): ?>
+                                        <a href="<?= htmlspecialchars($lead['clutch']) ?>" target="_blank" class="text-decoration-none">Clutch</a>
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= htmlspecialchars($lead['insta'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['social_profile'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['address'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['description_information'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['whatsapp'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['next_step'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['other'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['status'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['country'] ?: 'N/A') ?></td>
                                 <td><?= htmlspecialchars($lead['sdr_name'] ?: 'N/A') ?></td>
                                 <td>
                                     <?php
-                                    $statusClass = match($lead['duplicate_status']) {
-                                        'unique' => 'status-unique',
-                                        'duplicate' => 'status-duplicate',
-                                        'incomplete' => 'status-incomplete',
-                                        default => 'status-incomplete'
-                                    };
-                                    $statusIcon = match($lead['duplicate_status']) {
-                                        'unique' => '✅',
-                                        'duplicate' => '🔁',
-                                        'incomplete' => '⚠️',
-                                        default => '⚠️'
-                                    };
+                                    $status = $lead['duplicate_status'];
+                                    if ($status === 'unique') {
+                                        $statusClass = 'status-unique';
+                                        $statusIcon = '✅';
+                                    } elseif ($status === 'duplicate') {
+                                        $statusClass = 'status-duplicate';
+                                        $statusIcon = '🔁';
+                                    } else {
+                                        $statusClass = 'status-incomplete';
+                                        $statusIcon = '⚠️';
+                                    }
                                     ?>
                                     <span class="status-badge <?= $statusClass ?>">
                                         <?= $statusIcon ?> <?= ucfirst($lead['duplicate_status']) ?>
                                     </span>
                                 </td>
-                                <td><?= date('M j, Y', strtotime($lead['created_at'])) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
                                         <a href="index.php?action=lead_view&id=<?= $lead['id'] ?>" 
@@ -175,6 +239,46 @@
                     </tbody>
                 </table>
             </div>
+            <?php if (!empty($totalPages) && $totalPages > 1): ?>
+            <div class="p-3 d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Showing <?= ($page - 1) * $limit + 1 ?> - <?= min($page * $limit, $total) ?> of <?= $total ?>
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <?php 
+                        $buildQuery = function($p) use ($search, $filters) {
+                            $params = array_merge(['action' => 'leads', 'page' => $p], $filters);
+                            if (!empty($search)) { $params['search'] = $search; }
+                            return 'index.php?' . http_build_query($params);
+                        };
+                        ?>
+                        <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildQuery(max(1, $page - 1)) ?>" aria-label="Previous">&laquo;</a>
+                        </li>
+                        <?php 
+                        $start = max(1, $page - 2);
+                        $end = min($totalPages, $page + 2);
+                        if ($start > 1) {
+                            echo '<li class="page-item"><a class="page-link" href="' . $buildQuery(1) . '">1</a></li>';
+                            if ($start > 2) echo '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                        }
+                        for ($p = $start; $p <= $end; $p++) {
+                            $active = $p == $page ? 'active' : '';
+                            echo '<li class="page-item ' . $active . '"><a class="page-link" href="' . $buildQuery($p) . '">' . $p . '</a></li>';
+                        }
+                        if ($end < $totalPages) {
+                            if ($end < $totalPages - 1) echo '<li class="page-item disabled"><span class="page-link">…</span></li>';
+                            echo '<li class="page-item"><a class="page-link" href="' . $buildQuery($totalPages) . '">' . $totalPages . '</a></li>';
+                        }
+                        ?>
+                        <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildQuery(min($totalPages, $page + 1)) ?>" aria-label="Next">&raquo;</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="text-center py-5">
                 <i class="fas fa-search fa-3x text-muted mb-3"></i>

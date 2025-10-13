@@ -127,13 +127,28 @@ class ImportController extends Controller {
         
         foreach ($data as $row) {
             $lead = [
-                'name' => trim($row['name'] ?? ''),
+                'lead_id' => trim($row['lead id'] ?? $row['lead_id'] ?? ''),
+                'name' => trim($row['contact name'] ?? $row['name'] ?? ''),
                 'company' => trim($row['company'] ?? ''),
                 'email' => trim($row['email'] ?? ''),
                 'phone' => trim($row['phone'] ?? ''),
                 'linkedin' => trim($row['linkedin'] ?? ''),
                 'website' => trim($row['website'] ?? ''),
-                'clutch' => trim($row['clutch'] ?? ''),
+                'clutch' => trim($row['clutch link'] ?? $row['clutch'] ?? ''),
+                'job_title' => trim($row['job title'] ?? $row['job_title'] ?? ''),
+                'industry' => trim($row['industry'] ?? ''),
+                'lead_source' => trim($row['lead source'] ?? $row['lead_source'] ?? ''),
+                'tier' => trim($row['tier'] ?? ''),
+                'lead_status' => trim($row['lead status'] ?? $row['lead_status'] ?? ''),
+                'insta' => trim($row['insta'] ?? $row['instagram'] ?? ''),
+                'social_profile' => trim($row['social profile'] ?? $row['social_profile'] ?? ''),
+                'address' => trim($row['address'] ?? ''),
+                'description_information' => trim($row['description information'] ?? $row['description_information'] ?? ''),
+                'whatsapp' => trim($row['whatsapp'] ?? ''),
+                'next_step' => trim($row['next step'] ?? $row['next_step'] ?? ''),
+                'other' => trim($row['other'] ?? ''),
+                'status' => trim($row['status'] ?? ''),
+                'country' => trim($row['country'] ?? ''),
                 'notes' => trim($row['notes'] ?? ''),
                 'sdr_id' => null // Will be set by the model
             ];

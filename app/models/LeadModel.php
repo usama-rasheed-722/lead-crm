@@ -7,18 +7,80 @@ class LeadModel extends BaseModel {
             $data['lead_id'] = $this->generateLeadId($data['sdr_id']);
         }
         $status = $this->detectDuplicateStatus($data);
-        $stmt = $this->pdo->prepare("INSERT INTO leads (lead_id,name,company,email,phone,linkedin,website,clutch,sdr_id,duplicate_status,notes,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+
+        $stmt = $this->pdo->prepare("
+        INSERT INTO leads (
+            lead_id, name, company, email, phone, linkedin, website, clutch,
+            sdr_id, duplicate_status, notes, created_by,
+            date, lead_owner, contact_name, job_title, industry, lead_source,
+            tier, lead_status, insta, social_profile, address, description_information,
+            whatsapp, next_step, other, status, country, sdr_name
+        )
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ");
+    
         $stmt->execute([
-            $data['lead_id'],$data['name'],$data['company'],$data['email'],$data['phone'],$data['linkedin'],$data['website'],$data['clutch'],$data['sdr_id'],$status,$data['notes'],$data['created_by']
+            $data['lead_id'], $data['name'], $data['company'], $data['email'], $data['phone'],
+            $data['linkedin'], $data['website'], $data['clutch'],
+            $data['sdr_id'], $status, $data['notes'], $data['created_by'],
+            $data['date'] ?? null,
+            $data['lead_owner'] ?? null,
+            $data['contact_name'] ?? null,
+            $data['job_title'] ?? null,
+            $data['industry'] ?? null,
+            $data['lead_source'] ?? null,
+            $data['tier'] ?? null,
+            $data['lead_status'] ?? null,
+            $data['insta'] ?? null,
+            $data['social_profile'] ?? null,
+            $data['address'] ?? null,
+            $data['description_information'] ?? null,
+            $data['whatsapp'] ?? null,
+            $data['next_step'] ?? null,
+            $data['other'] ?? null,
+            $data['status'] ?? null,
+            $data['country'] ?? null,
+            $data['sdr_name'] ?? null
         ]);
+
         return $this->pdo->lastInsertId();
     }
 
     // Update existing lead
-    public function update($id,$data){
-        $status = $this->detectDuplicateStatus($data,$id);
-        $stmt = $this->pdo->prepare("UPDATE leads SET name=?,company=?,email=?,phone=?,linkedin=?,website=?,clutch=?,sdr_id=?,duplicate_status=?,notes=?,updated_at=NOW() WHERE id=?");
-        return $stmt->execute([$data['name'],$data['company'],$data['email'],$data['phone'],$data['linkedin'],$data['website'],$data['clutch'],$data['sdr_id'],$status,$data['notes'],$id]);
+    public function update($id, $data){
+        $status = $this->detectDuplicateStatus($data, $id);
+        $stmt = $this->pdo->prepare("
+            UPDATE leads SET
+                name=?, company=?, email=?, phone=?, linkedin=?, website=?, clutch=?, sdr_id=?, duplicate_status=?, notes=?,
+                date=?, lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source=?, tier=?, lead_status=?,
+                insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?, status=?, country=?, sdr_name=?,
+                updated_at=NOW()
+            WHERE id=?
+        ");
+
+        return $stmt->execute([
+            $data['name'], $data['company'], $data['email'], $data['phone'], $data['linkedin'], $data['website'],
+            $data['clutch'], $data['sdr_id'], $status, $data['notes'],
+            $data['date'] ?? null,
+            $data['lead_owner'] ?? null,
+            $data['contact_name'] ?? null,
+            $data['job_title'] ?? null,
+            $data['industry'] ?? null,
+            $data['lead_source'] ?? null,
+            $data['tier'] ?? null,
+            $data['lead_status'] ?? null,
+            $data['insta'] ?? null,
+            $data['social_profile'] ?? null,
+            $data['address'] ?? null,
+            $data['description_information'] ?? null,
+            $data['whatsapp'] ?? null,
+            $data['next_step'] ?? null,
+            $data['other'] ?? null,
+            $data['status'] ?? null,
+            $data['country'] ?? null,
+            $data['sdr_name'] ?? null,
+            $id
+        ]);
     }
 
     // Delete a lead
@@ -48,12 +110,15 @@ class LeadModel extends BaseModel {
         $where = [];
         $params = [];
         if($q){
-            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? )";
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ?)";
             $like = '%'.$q.'%';
-            for($i=0;$i<7;$i++) $params[] = $like;
+            for($i=0;$i<9;$i++) $params[] = $like;
         }
         if(!empty($filters['sdr_id'])){ $where[]='l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
+        if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
+        if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
+        if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
         if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
 
@@ -66,7 +131,32 @@ class LeadModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
-    // Detect duplicate status
+    // Count rows for pagination with same filters as search
+    public function countSearch($q, $filters=[]){
+        $where = [];
+        $params = [];
+        if($q){
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ?)";
+            $like = '%'.$q.'%';
+            for($i=0;$i<9;$i++) $params[] = $like;
+        }
+        if(!empty($filters['sdr_id'])){ $where[]='l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
+        if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
+        if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
+        if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
+        if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
+        if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
+        if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
+
+        $sql = 'SELECT COUNT(*) as cnt FROM leads l';
+        if($where) $sql .= ' WHERE '.implode(' AND ',$where);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return (int)($row['cnt'] ?? 0);
+    }
+
+    // Duplicate detection logic remains the same
     public function detectDuplicateStatus($data, $excludeId = null){
         $email = $data['email'] ? normalize($data['email']) : null;
         $phone = $data['phone'] ? normalize_phone($data['phone']) : null;
@@ -79,7 +169,7 @@ class LeadModel extends BaseModel {
         $conds = [];
         $params = [];
         if($email){ $conds[]='LOWER(email)=?'; $params[]=$email; }
-        if($phone){ $conds[]='REPLACE(phone,\'\',\'\') LIKE ?'; $params[]="%".$phone."%"; }
+        if($phone){ $conds[]='REPLACE(phone,"","") LIKE ?'; $params[]="%".$phone."%"; }
         if($linkedin){ $conds[]='LOWER(linkedin)=?'; $params[]=$linkedin; }
         if($website){ $conds[]='LOWER(website)=?'; $params[]=$website; }
         if($clutch){ $conds[]='LOWER(clutch)=?'; $params[]=$clutch; }
@@ -96,11 +186,7 @@ class LeadModel extends BaseModel {
 
     // Generate Lead ID in format SDR{ID}-00001
     public function generateLeadId($sdr_id){
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) as c FROM leads WHERE sdr_id = ?');
-        $stmt->execute([$sdr_id]);
-        $c = (int)$stmt->fetchColumn();
-        $seq = $c + 1;
-        return 'SDR'.$sdr_id.'-'.str_pad($seq,5,'0',STR_PAD_LEFT);
+        return generateNextSDR($sdr_id);
     }
 
     // Bulk insert (CSV import)
@@ -127,9 +213,18 @@ class LeadModel extends BaseModel {
     public function exportCsv($filters = []){
         $leads = $this->search('', $filters, 10000, 0);
         $f = fopen('php://temp', 'r+');
-        fputcsv($f, ['Lead ID','Name','Company','Email','Phone','LinkedIn','Website','Clutch','SDR Name','Duplicate Status','Notes']);
+        fputcsv($f, [
+            'Lead ID','Name','Company','Email','Phone','LinkedIn','Website','Clutch','Lead Owner','Contact Name',
+            'Job Title','Industry','Lead Source','Tier','Lead Status','Insta','Social Profile','Address',
+            'Description Information','Whatsapp','Next Step','Other','Status','Country','SDR Name','Duplicate Status','Notes'
+        ]);
         foreach($leads as $lead){
-            fputcsv($f, [$lead['lead_id'],$lead['name'],$lead['company'],$lead['email'],$lead['phone'],$lead['linkedin'],$lead['website'],$lead['clutch'],$lead['sdr_name'],$lead['duplicate_status'],$lead['notes']]);
+            fputcsv($f, [
+                $lead['lead_id'],$lead['name'],$lead['company'],$lead['email'],$lead['phone'],$lead['linkedin'],$lead['website'],$lead['clutch'],
+                $lead['lead_owner'],$lead['contact_name'],$lead['job_title'],$lead['industry'],$lead['lead_source'],$lead['tier'],$lead['lead_status'],
+                $lead['insta'],$lead['social_profile'],$lead['address'],$lead['description_information'],$lead['whatsapp'],$lead['next_step'],$lead['other'],
+                $lead['status'],$lead['country'],$lead['sdr_name'],$lead['duplicate_status'],$lead['notes']
+            ]);
         }
         rewind($f);
         $csv = stream_get_contents($f);
@@ -137,7 +232,7 @@ class LeadModel extends BaseModel {
         return $csv;
     }
 
-    // Get summary counts for dashboard
+    // Dashboard summary
     public function getSummary(){
         $pdo = $this->pdo;
         return [
@@ -148,4 +243,3 @@ class LeadModel extends BaseModel {
         ];
     }
 }
-
