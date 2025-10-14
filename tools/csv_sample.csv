@@ -1,4 +1,12 @@
-name,company,email,phone,linkedin,website,clutch,notes
-John Smith,Acme Corp,john.smith@acme.com,+1-555-0123,https://linkedin.com/in/johnsmith,https://acme.com,https://clutch.co/profile/acme-corp,Interested in our services
-Jane Doe,Tech Solutions,jane@techsolutions.com,+1-555-0456,https://linkedin.com/in/janedoe,https://techsolutions.com,,Looking for web development
-Bob Johnson,Startup Inc,bob@startup.com,+1-555-0789,https://linkedin.com/in/bobjohnson,https://startup.com,https://clutch.co/profile/startup-inc,Need mobile app development
+"Lead ID",Name,Company,Email,Phone,LinkedIn,Website,Clutch,"Lead Owner","Contact Name","Job Title",Industry,"Lead Source",Tier,"Lead Status",Insta,"Social Profile",Address,"Description Information",Whatsapp,"Next Step",Other,Status,Country,"SDR Name","Duplicate Status",Notes
+SDR3-0000004377,,,info@reform-financial.co.uk,,linkedin.com/in/lee-bridges,"https://www.play9.co.uk/ , https://www.reform-financial.co.uk/",https://clutch.co/go-to-review/e7d918e0-c1c8-4c3e-9875-89bea31814e7/137387,,,"Reform Financial
+ Managing Director",,Clutch,A-Tier,"Hot Lead",,,,,,,,,,sdr,duplicate,
+SDR3-0000004378,,,,,linkedin.com/in/cassandrapernia,http://www.thezyro.com/,https://clutch.co/go-to-review/e7d918e0-c1c8-4c3e-9875-89bea31814e7/130258,,,"Founder/CEO
+ Zyro",,Clutch,A-Tier,"Hot Lead",,,,,,,,,,sdr,duplicate,
+SDR3-0000004379,,,,,linkedin.com/in/elbing,http://standpoint.ch/,https://clutch.co/go-to-review/e7d918e0-c1c8-4c3e-9875-89bea31814e7/128853,,,"Business Storybuilding
+ Standpoint",,Clutch,A-Tier,"Hot Lead",,,,,,,,,,sdr,duplicate,
+SDR3-0000004380,,,,"44(0) 2078460108",linkedin.com/in/janthana-kaenprakhamroy-0b73546b,,https://clutch.co/go-to-review/e7d918e0-c1c8-4c3e-9875-89bea31814e7/112069,,,"Chief Executive Officer
+ Tapoly",,Clutch,A-Tier,"Hot Lead",,,,,,,,,,sdr,duplicate,
+SDR3-0000004381,,,info@waterfronts.hk,"44 7457 403169‬",linkedin.com/in/guv-kang,http://www.waterfronts.co.uk/,https://clutch.co/go-to-review/e7d918e0-c1c8-4c3e-9875-89bea31814e7/96410,,,"Founder & Owner
+ Waterfronts , Founder & Investor
+ Bricktrade",,Clutch,A-Tier,"Hot Lead",,,,,,,,,,sdr,duplicate,

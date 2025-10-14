@@ -12,18 +12,17 @@ class LeadModel extends BaseModel {
         INSERT INTO leads (
             lead_id, name, company, email, phone, linkedin, website, clutch,
             sdr_id, duplicate_status, notes, created_by,
-            date, lead_owner, contact_name, job_title, industry, lead_source,
+              lead_owner, contact_name, job_title, industry, lead_source,
             tier, lead_status, insta, social_profile, address, description_information,
             whatsapp, next_step, other, status, country, sdr_name
         )
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ");
     
         $stmt->execute([
             $data['lead_id'], $data['name'], $data['company'], $data['email'], $data['phone'],
             $data['linkedin'], $data['website'], $data['clutch'],
             $data['sdr_id'], $status, $data['notes'], $data['created_by'],
-            $data['date'] ?? null,
             $data['lead_owner'] ?? null,
             $data['contact_name'] ?? null,
             $data['job_title'] ?? null,
@@ -52,7 +51,7 @@ class LeadModel extends BaseModel {
         $stmt = $this->pdo->prepare("
             UPDATE leads SET
                 name=?, company=?, email=?, phone=?, linkedin=?, website=?, clutch=?, sdr_id=?, duplicate_status=?, notes=?,
-                date=?, lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source=?, tier=?, lead_status=?,
+                  lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source=?, tier=?, lead_status=?,
                 insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?, status=?, country=?, sdr_name=?,
                 updated_at=NOW()
             WHERE id=?
@@ -61,7 +60,6 @@ class LeadModel extends BaseModel {
         return $stmt->execute([
             $data['name'], $data['company'], $data['email'], $data['phone'], $data['linkedin'], $data['website'],
             $data['clutch'], $data['sdr_id'], $status, $data['notes'],
-            $data['date'] ?? null,
             $data['lead_owner'] ?? null,
             $data['contact_name'] ?? null,
             $data['job_title'] ?? null,
@@ -114,13 +112,15 @@ class LeadModel extends BaseModel {
             $like = '%'.$q.'%';
             for($i=0;$i<9;$i++) $params[] = $like;
         }
+        // pr( $filters['date_from']);
+        // pr( $filters['date_to'],1);
         if(!empty($filters['sdr_id'])){ $where[]='l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
         if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
         if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
-        if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
-        if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
+        if(!empty($filters['date_from'])){ $where[]='date(l.created_at) >= ?'; $params[] = $filters['date_from']; }
+        if(!empty($filters['date_to'])){ $where[]='date(l.created_at) <= ?'; $params[] = $filters['date_to']; }
 
         $sql = 'SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.id';
         if($where) $sql .= ' WHERE '.implode(' AND ',$where);
@@ -196,6 +196,7 @@ class LeadModel extends BaseModel {
         try{
             foreach($rows as $r){
                 $sdr_id = $r['sdr_id'] ?? $created_by;
+                $r['sdr_id'] =  $created_by;
                 $r['lead_id'] = $this->generateLeadId($sdr_id);
                 $r['created_by'] = $created_by;
                 $id = $this->create($r);
