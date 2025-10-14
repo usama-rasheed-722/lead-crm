@@ -64,8 +64,15 @@ switch ($action) {
     case 'generate_sdr':
         (new LeadController())->generateSDR($_GET['id'] ?? null);
         break;
-    case 'bulk_generate_sdr':
-        (new LeadController())->bulkGenerateSDR();
+    
+    case 'bulk_delete':
+        (new LeadController())->bulkDelete();
+        break;
+    case 'find_duplicates':
+        (new LeadController())->findDuplicates($_GET['id'] ?? null);
+        break;
+    case 'merge_duplicates':
+        (new LeadController())->mergeDuplicates($_GET['id'] ?? null);
         break;
     case 'import':
         (new ImportController())->index();

@@ -9,13 +9,13 @@ class UserModel extends BaseModel {
     }
     
     public function findById($id) {
-        $stmt = $this->pdo->prepare('SELECT id, username, email, full_name, role FROM users WHERE id = ?');
+        $stmt = $this->pdo->prepare('SELECT * FROM users WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
     
     public function all() {
-        $stmt = $this->pdo->prepare('SELECT id, username, email, full_name, role FROM users ORDER BY full_name');
+        $stmt = $this->pdo->prepare('SELECT * FROM users ORDER BY full_name');
         $stmt->execute();
         return $stmt->fetchAll();
     }

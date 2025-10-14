@@ -282,42 +282,100 @@ class LeadController extends Controller {
         }
     }
     
-    // Bulk generate SDR numbers for all leads without them
-    public function bulkGenerateSDR() {
+ 
+    // Bulk delete leads
+    public function bulkDelete() {
         require_role(['admin']); // Only admins can do bulk operations
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $leadIds = $_POST['lead_ids'] ?? '';
+        if (empty($leadIds)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected for deletion'));
+        }
+        
+        $ids = array_filter(array_map('intval', explode(',', $leadIds)));
+        if (empty($ids)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+        }
         
         try {
             $pdo = $this->pdo;
             $pdo->beginTransaction();
             
-            // Get all leads without proper SDR numbers
-            $stmt = $pdo->prepare('
-                SELECT id, sdr_id 
-                FROM leads 
-                WHERE lead_id IS NULL 
-                OR lead_id = "" 
-                OR lead_id NOT REGEXP "^SDR[0-9]+-[0-9]+$"
-                ORDER BY sdr_id, id
-            ');
-            $stmt->execute();
-            $leads = $stmt->fetchAll();
+            $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("DELETE FROM leads WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
             
-            $generated = 0;
-            foreach ($leads as $lead) {
-                if ($lead['sdr_id']) {
-                    $sdrNumber = generateNextSDR($lead['sdr_id']);
-                    $updateStmt = $pdo->prepare('UPDATE leads SET lead_id = ? WHERE id = ?');
-                    $updateStmt->execute([$sdrNumber, $lead['id']]);
-                    $generated++;
-                }
-            }
-            
+            $deletedCount = $stmt->rowCount();
             $pdo->commit();
-            $this->redirect("index.php?action=leads&success=" . urlencode("Generated {$generated} SDR numbers successfully"));
+            
+            $this->redirect("index.php?action=leads&success=" . urlencode("Successfully deleted {$deletedCount} lead(s)"));
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $this->redirect("index.php?action=leads&error=" . urlencode('Failed to generate SDR numbers: ' . $e->getMessage()));
+            $this->redirect("index.php?action=leads&error=" . urlencode('Failed to delete leads: ' . $e->getMessage()));
+        }
+    }
+    
+    // Find duplicates for a lead
+    public function findDuplicates($id) {
+        if (!$id) {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $lead = $this->leadModel->getById($id);
+        if (!$lead) {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        // Check permissions
+        $user = auth_user();
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+            http_response_code(403);
+            echo 'Access denied';
+            exit;
+        }
+        
+        $duplicates = $this->leadModel->findDuplicates($id);
+        
+        $this->view('leads/duplicates', [
+            'lead' => $lead,
+            'duplicates' => $duplicates
+        ]);
+    }
+    
+    // Merge duplicate leads
+    public function mergeDuplicates($id) {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$id) {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $lead = $this->leadModel->getById($id);
+        if (!$lead) {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        // Check permissions
+        $user = auth_user();
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+            http_response_code(403);
+            echo 'Access denied';
+            exit;
+        }
+        
+        $duplicateIds = $_POST['duplicate_ids'] ?? [];
+        if (empty($duplicateIds)) {
+            $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('No duplicates selected for merging'));
+        }
+        
+        try {
+            $this->leadModel->mergeDuplicates($id, $duplicateIds);
+            $this->redirect("index.php?action=lead_view&id={$id}&success=" . urlencode('Successfully merged ' . count($duplicateIds) . ' duplicate lead(s)'));
+        } catch (Exception $e) {
+            $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('Failed to merge duplicates: ' . $e->getMessage()));
         }
     }
 }

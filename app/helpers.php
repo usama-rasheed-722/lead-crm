@@ -68,7 +68,7 @@ function generateNextSDR($userId) {
     }
     
     // Pad with leading zeros to 5 digits (matching existing format)
-    $formattedNumber = str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+    $formattedNumber = str_pad($nextNumber, 10, '0', STR_PAD_LEFT);
     
     // Final format: SDR{user_id}-00001
     $newSDR = "SDR{$userId}-{$formattedNumber}";

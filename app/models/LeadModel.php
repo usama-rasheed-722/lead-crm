@@ -169,7 +169,7 @@ class LeadModel extends BaseModel {
         $conds = [];
         $params = [];
         if($email){ $conds[]='LOWER(email)=?'; $params[]=$email; }
-        if($phone){ $conds[]='REPLACE(phone,"","") LIKE ?'; $params[]="%".$phone."%"; }
+        if($phone){ $conds[]='REPLACE(phone,"","") LIKE ?'; $params[]=$phone; }
         if($linkedin){ $conds[]='LOWER(linkedin)=?'; $params[]=$linkedin; }
         if($website){ $conds[]='LOWER(website)=?'; $params[]=$website; }
         if($clutch){ $conds[]='LOWER(clutch)=?'; $params[]=$clutch; }
@@ -230,6 +230,181 @@ class LeadModel extends BaseModel {
         $csv = stream_get_contents($f);
         fclose($f);
         return $csv;
+    }
+
+    // Find duplicates for a specific lead
+    public function findDuplicates($leadId) {
+        $lead = $this->getById($leadId);
+        if (!$lead) return [];
+        
+        $duplicates = [];
+        
+        // Check for duplicates based on email
+        if (!empty($lead['email'])) {
+            $stmt = $this->pdo->prepare('
+                SELECT l.*, u.username as sdr_name 
+                FROM leads l 
+                LEFT JOIN users u ON l.sdr_id = u.id 
+                WHERE LOWER(l.email) = LOWER(?) AND l.id != ?
+            ');
+            $stmt->execute([$lead['email'], $leadId]);
+            $emailDups = $stmt->fetchAll();
+            foreach ($emailDups as $dup) {
+                $duplicates[] = array_merge($dup, ['match_type' => 'email']);
+            }
+        }
+
+        
+        // Check for duplicates based on phone
+        if (!empty($lead['phone'])) {
+            $normalizedPhone = normalize_phone($lead['phone']);
+            // pr( $normalizedPhone ,1);
+            $stmt = $this->pdo->prepare('
+                SELECT l.*, u.username as sdr_name 
+                FROM leads l 
+                LEFT JOIN users u ON l.sdr_id = u.id 
+                WHERE REPLACE(l.phone, " ", "") = ? AND l.id != ?
+            ');
+            $stmt->execute([$normalizedPhone, $leadId]);
+            $phoneDups = $stmt->fetchAll();
+            foreach ($phoneDups as $dup) {
+                $duplicates[] = array_merge($dup, ['match_type' => 'phone']);
+            }
+        }
+        
+        // Check for duplicates based on LinkedIn
+        if (!empty($lead['linkedin'])) {
+            $stmt = $this->pdo->prepare('
+                SELECT l.*, u.username as sdr_name 
+                FROM leads l 
+                LEFT JOIN users u ON l.sdr_id = u.id 
+                WHERE LOWER(l.linkedin) = LOWER(?) AND l.id != ?
+            ');
+            $stmt->execute([$lead['linkedin'], $leadId]);
+            $linkedinDups = $stmt->fetchAll();
+            foreach ($linkedinDups as $dup) {
+                $duplicates[] = array_merge($dup, ['match_type' => 'linkedin']);
+            }
+        }
+        
+        // Check for duplicates based on website
+        if (!empty($lead['website'])) {
+            $stmt = $this->pdo->prepare('
+            SELECT l.*, u.username as sdr_name 
+                FROM leads l 
+                LEFT JOIN users u ON l.sdr_id = u.id 
+                WHERE LOWER(l.website) = LOWER(?) AND l.id != ?
+                ');
+                $stmt->execute([$lead['website'], $leadId]);
+                $websiteDups = $stmt->fetchAll();
+                foreach ($websiteDups as $dup) {
+                    $duplicates[] = array_merge($dup, ['match_type' => 'website']);
+                }
+            }
+            
+            // Check for duplicates based on Clutch
+            if (!empty($lead['clutch'])) {
+            $stmt = $this->pdo->prepare('
+            SELECT l.*, u.username as sdr_name 
+            FROM leads l 
+            LEFT JOIN users u ON l.sdr_id = u.id 
+                WHERE LOWER(l.clutch) = LOWER(?) AND l.id != ?
+                ');
+                $stmt->execute([$lead['clutch'], $leadId]);
+                $clutchDups = $stmt->fetchAll();
+            foreach ($clutchDups as $dup) {
+                $duplicates[] = array_merge($dup, ['match_type' => 'clutch']);
+            }
+        }
+        
+        // Remove duplicates and return unique results
+        $uniqueDuplicates = [];
+        $seenIds = [];
+        foreach ($duplicates as $dup) {
+            if (!in_array($dup['id'], $seenIds)) {
+                $uniqueDuplicates[] = $dup;
+                $seenIds[] = $dup['id'];
+            }
+        }
+        
+        return $uniqueDuplicates;
+    }
+    
+    // Merge duplicate leads
+    public function mergeDuplicates($primaryId, $duplicateIds) {
+        $this->pdo->beginTransaction();
+        try {
+            // Get primary lead data
+            $primaryLead = $this->getById($primaryId);
+            if (!$primaryLead) {
+                throw new Exception('Primary lead not found');
+            }
+            
+            // Get duplicate leads data
+            $duplicateLeads = [];
+            foreach ($duplicateIds as $dupId) {
+                $dupLead = $this->getById($dupId);
+                if ($dupLead) {
+                    $duplicateLeads[] = $dupLead;
+                }
+            }
+            
+            // Merge data from duplicates into primary (keep non-empty values)
+            $mergedData = [
+                'name' => $primaryLead['name'],
+                'company' => $primaryLead['company'],
+                'email' => $primaryLead['email'],
+                'phone' => $primaryLead['phone'],
+                'linkedin' => $primaryLead['linkedin'],
+                'website' => $primaryLead['website'],
+                'clutch' => $primaryLead['clutch'],
+                'job_title' => $primaryLead['job_title'],
+                'industry' => $primaryLead['industry'],
+                'lead_source' => $primaryLead['lead_source'],
+                'tier' => $primaryLead['tier'],
+                'lead_status' => $primaryLead['lead_status'],
+                'insta' => $primaryLead['insta'],
+                'social_profile' => $primaryLead['social_profile'],
+                'address' => $primaryLead['address'],
+                'description_information' => $primaryLead['description_information'],
+                'whatsapp' => $primaryLead['whatsapp'],
+                'next_step' => $primaryLead['next_step'],
+                'other' => $primaryLead['other'],
+                'status' => $primaryLead['status'],
+                'country' => $primaryLead['country'],
+                'notes' => $primaryLead['notes'],
+                // 'duplicate_status'=>'unique'
+            ];
+            
+            // Merge data from duplicates
+            foreach ($duplicateLeads as $dup) {
+                foreach ($mergedData as $key => $value) {
+                    if (empty($value) && !empty($dup[$key])) {
+                        $mergedData[$key] = $dup[$key];
+                    }
+                }
+                
+                // Append notes
+                if (!empty($dup['notes'])) {
+                    $mergedData['notes'] .= "\n\n--- Merged from Lead ID: {$dup['lead_id']} ---\n" . $dup['notes'];
+                }
+            }
+            
+            // Update primary lead with merged data
+            $this->update($primaryId, $mergedData);
+            
+            // Delete duplicate leads
+            foreach ($duplicateIds as $dupId) {
+                $this->delete($dupId);
+            }
+            
+            $this->pdo->commit();
+            return true;
+            
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
     }
 
     // Dashboard summary

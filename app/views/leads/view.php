@@ -5,11 +5,9 @@
         <i class="fas fa-user me-2"></i>Lead Details
     </h2>
     <div>
-        <?php if (empty($lead['lead_id']) || !preg_match('/^SDR\d+-\d+$/', $lead['lead_id'])): ?>
-            <a href="index.php?action=generate_sdr&id=<?= $lead['id'] ?>" class="btn btn-success me-2">
-                <i class="fas fa-hashtag me-2"></i>Generate SDR Number
-            </a>
-        <?php endif; ?>
+        <a href="index.php?action=find_duplicates&id=<?= $lead['id'] ?>" class="btn btn-warning me-2">
+            <i class="fas fa-search me-2"></i>Find Duplicates
+        </a>
         <a href="index.php?action=lead_edit&id=<?= $lead['id'] ?>" class="btn btn-outline-primary me-2">
             <i class="fas fa-edit me-2"></i>Edit Lead
         </a>

@@ -84,9 +84,9 @@
         <h5 class="mb-0">Leads (<?= (int)($total ?? count($leads)) ?> found)</h5>
         <div>
             <?php if (auth_user()['role'] === 'admin'): ?>
-                <a href="index.php?action=bulk_generate_sdr" class="btn btn-sm btn-warning me-2">
-                    <i class="fas fa-hashtag me-1"></i>Generate All SDR Numbers
-                </a>
+                <button type="button" class="btn btn-sm btn-danger me-2" id="bulkDeleteBtn" disabled>
+                    <i class="fas fa-trash me-1"></i>Delete Selected
+                </button>
             <?php endif; ?>
             <a href="index.php?action=export_csv" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
@@ -102,6 +102,11 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
+                            <?php if (auth_user()['role'] === 'admin'): ?>
+                            <th>
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <?php endif; ?>
                             <th>Date</th>
                             <th>Lead ID</th>
                             <th>Lead Owner</th>
@@ -134,6 +139,11 @@
                     <tbody>
                         <?php foreach ($leads as $lead): ?>
                             <tr>
+                                <?php if (auth_user()['role'] === 'admin'): ?>
+                                <td>
+                                    <input type="checkbox" class="form-check-input lead-checkbox" value="<?= $lead['id'] ?>">
+                                </td>
+                                <?php endif; ?>
                                 <td><?= date('Y-m-d', strtotime($lead['created_at'])) ?></td>
                                 <td>
                                     <a href="index.php?action=lead_view&id=<?= $lead['id'] ?>" class="text-decoration-none fw-bold">
@@ -291,5 +301,85 @@
         <?php endif; ?>
     </div>
 </div>
+
+<!-- Bulk Delete Form -->
+<form id="bulkDeleteForm" method="POST" action="index.php?action=bulk_delete" style="display: none;">
+    <input type="hidden" name="lead_ids" id="bulkDeleteIds">
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const leadCheckboxes = document.querySelectorAll('.lead-checkbox');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+    const bulkDeleteIds = document.getElementById('bulkDeleteIds');
+
+    // Select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            leadCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkDeleteButton();
+        });
+    }
+
+    // Individual checkbox change
+    leadCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateBulkDeleteButton();
+            updateSelectAllState();
+        });
+    });
+
+    function updateBulkDeleteButton() {
+        const checkedBoxes = document.querySelectorAll('.lead-checkbox:checked');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.disabled = checkedBoxes.length === 0;
+        }
+    }
+
+    function updateSelectAllState() {
+        const checkedBoxes = document.querySelectorAll('.lead-checkbox:checked');
+        const totalBoxes = leadCheckboxes.length;
+        
+        if (selectAllCheckbox) {
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === totalBoxes) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    // Bulk delete functionality
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function() {
+            const checkedBoxes = document.querySelectorAll('.lead-checkbox:checked');
+            if (checkedBoxes.length === 0) return;
+
+            if (confirm(`Are you sure you want to delete ${checkedBoxes.length} selected lead(s)? This action cannot be undone.`)) {
+                const ids = Array.from(checkedBoxes).map(cb => cb.value);
+                bulkDeleteIds.value = ids.join(',');
+                bulkDeleteForm.submit();
+            }
+        });
+    }
+
+    // Delete confirmation for individual leads
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
