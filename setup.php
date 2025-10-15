@@ -4,7 +4,7 @@ require_once __DIR__ . '/core/Database.php';
 
 try {
     // Create database connection
-    $pdo = new PDO("mysql:host=127.0.0.1;charset=utf8mb4", 'root', '');
+    $pdo = new PDO("mysql:host=localhost", 'root', '');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     // Read and execute schema

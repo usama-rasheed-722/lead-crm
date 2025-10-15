@@ -5,7 +5,7 @@ $config = require __DIR__.'/config.php';
 
 
 // PDO connection
-$dsn = "mysql:host={$config['db']['host']};dbname={$config['db']['name']};charset={$config['db']['charset']}";
+$dsn = "mysql:host={$config['db']['host']};dbname={$config['db']['name']}";
 try {
 $pdo = new PDO($dsn, $config['db']['user'], $config['db']['pass'], [
 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
