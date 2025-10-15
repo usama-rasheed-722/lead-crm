@@ -49,8 +49,7 @@ CREATE TABLE leads (
     status VARCHAR(100) DEFAULT NULL,
     country VARCHAR(100) DEFAULT NULL,
     sdr_name VARCHAR(255) DEFAULT NULL,
-
-    FOREIGN KEY (sdr_id) REFERENCES users(id) ON DELETE SET NULL,
+ 
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -63,8 +62,7 @@ user_id INT NOT NULL,
 type ENUM('call','email','update','note') DEFAULT 'note',
 content TEXT NOT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
-FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 

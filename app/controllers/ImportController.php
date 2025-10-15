@@ -93,30 +93,60 @@ class ImportController extends Controller {
         return $this->validateAndFormatData($data);
     }
     
-    // Parse CSV file
+    // Parse CSV file with robust handling (delimiter, BOM, empty cells)
     private function parseCsv($filePath) {
         $data = [];
         $handle = fopen($filePath, 'r');
-        
         if ($handle === false) {
             throw new Exception('Could not open file');
         }
-        
-        $headers = fgetcsv($handle);
-        if (!$headers) {
+
+        // Read first line raw to detect BOM and delimiter
+        $firstLine = fgets($handle);
+        if ($firstLine === false) {
             fclose($handle);
-            throw new Exception('Invalid CSV format');
+            throw new Exception('Empty file');
         }
-        
-        // Normalize headers
-        $headers = array_map('strtolower', array_map('trim', $headers));
-        
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) === count($headers)) {
-                $data[] = array_combine($headers, $row);
+        // Remove UTF-8 BOM if present
+        if (substr($firstLine, 0, 3) === "\xEF\xBB\xBF") {
+            $firstLine = substr($firstLine, 3);
+        }
+
+        // Detect delimiter by choosing the one with most fields
+        $candidateDelimiters = [',', '\t', ';', '|'];
+        $bestDelimiter = ',';
+        $maxFields = 0;
+        foreach ($candidateDelimiters as $delim) {
+            $parsed = str_getcsv($firstLine, $delim);
+            if (count($parsed) > $maxFields) {
+                $maxFields = count($parsed);
+                $bestDelimiter = $delim;
             }
         }
-        
+
+        // Headers from first line using detected delimiter
+        $headers = array_map('trim', str_getcsv($firstLine, $bestDelimiter));
+        if (empty($headers)) {
+            fclose($handle);
+            throw new Exception('Invalid CSV header');
+        }
+        // Normalize headers (lowercase)
+        $headers = array_map('strtolower', $headers);
+
+        // Read remaining lines using fgetcsv with the detected delimiter
+        while (($row = fgetcsv($handle, 0, $bestDelimiter)) !== false) {
+            // Align row length to headers
+            if (count($row) < count($headers)) {
+                $row = array_merge($row, array_fill(0, count($headers) - count($row), ''));
+            } elseif (count($row) > count($headers)) {
+                $row = array_slice($row, 0, count($headers));
+            }
+            // Check if row is effectively empty
+            $nonEmpty = array_filter($row, function($v){ return trim((string)$v) !== ''; });
+            if (empty($nonEmpty)) { continue; }
+            $data[] = array_combine($headers, $row);
+        }
+
         fclose($handle);
         return $data;
     }
