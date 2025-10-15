@@ -31,7 +31,8 @@ class UserController extends Controller {
             'email' => trim($_POST['email'] ?? ''),
             'full_name' => trim($_POST['full_name'] ?? ''),
             'role' => $_POST['role'] ?? 'sdr',
-            'password' => password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT)
+            'password' => password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT),
+            'sdr_id' => ($_POST['sdr_id'] ?? '') !== '' ? (int)$_POST['sdr_id'] : null
         ];
         
         // Validate required fields
@@ -85,7 +86,8 @@ class UserController extends Controller {
             'username' => trim($_POST['username'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'full_name' => trim($_POST['full_name'] ?? ''),
-            'role' => $_POST['role'] ?? 'sdr'
+            'role' => $_POST['role'] ?? 'sdr',
+            'sdr_id' => ($_POST['sdr_id'] ?? '') !== '' ? (int)$_POST['sdr_id'] : null
         ];
         
         // Validate required fields

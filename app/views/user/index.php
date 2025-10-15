@@ -35,6 +35,7 @@
                         <th>Email</th>
                         <th>Full Name</th>
                         <th>Role</th>
+                        <th>SDR ID</th>
                         <th>Created</th>
                         <th>Actions</th>
                     </tr>
@@ -55,17 +56,20 @@
                                 <td><?= htmlspecialchars($user['full_name'] ?: 'N/A') ?></td>
                                 <td>
                                     <?php
-                                    $roleClass = match($user['role']) {
-                                        'admin' => 'bg-danger',
-                                        'manager' => 'bg-warning',
-                                        'sdr' => 'bg-info',
-                                        default => 'bg-secondary'
-                                    };
+                                    $roleClass = 'bg-secondary';
+                                    if ($user['role'] === 'admin') {
+                                        $roleClass = 'bg-danger';
+                                    } elseif ($user['role'] === 'manager') {
+                                        $roleClass = 'bg-warning';
+                                    } elseif ($user['role'] === 'sdr') {
+                                        $roleClass = 'bg-info';
+                                    }
                                     ?>
                                     <span class="badge <?= $roleClass ?>">
                                         <?= ucfirst($user['role']) ?>
                                     </span>
                                 </td>
+                                <td><?= htmlspecialchars($user['sdr_id'] ?? '—') ?></td>
                                 <td><?= date('M j, Y', strtotime($user['created_at'])) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">

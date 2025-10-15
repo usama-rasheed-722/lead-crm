@@ -34,7 +34,7 @@ class ImportController extends Controller {
         
         try {
             $data = $this->parseFile($file['tmp_name'], $fileExtension);
-            $importedCount = $this->leadModel->bulkInsert($data, $user['id']);
+            $importedCount = $this->leadModel->bulkInsert($data, $user['id'], $user['sdr_id'] ?? $user['id']);
             
             $this->redirect('index.php?action=import&success=' . urlencode("Successfully imported {$importedCount} leads"));
         } catch (Exception $e) {
@@ -49,7 +49,7 @@ class ImportController extends Controller {
         
         // Apply role-based filtering
         if ($user['role'] === 'sdr') {
-            $filters['sdr_id'] = $user['id'];
+            $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
         }
         
         $csv = $this->leadModel->exportCsv($filters);
@@ -67,7 +67,7 @@ class ImportController extends Controller {
         
         // Apply role-based filtering
         if ($user['role'] === 'sdr') {
-            $filters['sdr_id'] = $user['id'];
+            $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
         }
         
         $csv = $this->leadModel->exportCsv($filters);

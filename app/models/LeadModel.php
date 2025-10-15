@@ -89,14 +89,14 @@ class LeadModel extends BaseModel {
 
     // Get a single lead by ID
     public function getById($id){
-        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.id WHERE l.id = ?');
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id WHERE l.id = ?');
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
 
     // Get all leads (paginated)
     public function all($limit=100, $offset=0){
-        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.id ORDER BY l.created_at DESC LIMIT ? OFFSET ?');
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id ORDER BY l.created_at DESC LIMIT ? OFFSET ?');
         $stmt->bindValue(1,(int)$limit,PDO::PARAM_INT);
         $stmt->bindValue(2,(int)$offset,PDO::PARAM_INT);
         $stmt->execute();
@@ -122,7 +122,7 @@ class LeadModel extends BaseModel {
         if(!empty($filters['date_from'])){ $where[]='date(l.created_at) >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='date(l.created_at) <= ?'; $params[] = $filters['date_to']; }
 
-        $sql = 'SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.id';
+        $sql = 'SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id';
         if($where) $sql .= ' WHERE '.implode(' AND ',$where);
         $sql .= ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
         $params[] = (int)$limit; $params[] = (int)$offset;
@@ -190,15 +190,15 @@ class LeadModel extends BaseModel {
     }
 
     // Bulk insert (CSV import)
-    public function bulkInsert($rows, $created_by){
+    public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id){
         $this->pdo->beginTransaction();
         $leadIds = [];
         try{
             foreach($rows as $r){
-                $sdr_id = $r['sdr_id'] ?? $created_by;
-                $r['sdr_id'] =  $created_by;
+                $sdr_id = $r['sdr_id'] ?? $current_user_sdr_id;
+                $r['sdr_id'] =  $current_user_sdr_id;
                 $r['lead_id'] = $this->generateLeadId($sdr_id);
-                $r['created_by'] = $created_by;
+                $r['created_by'] = $created_by_user_id;
                 $id = $this->create($r);
                 $leadIds[] = $id;
             }
@@ -245,7 +245,7 @@ class LeadModel extends BaseModel {
             $stmt = $this->pdo->prepare('
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
-                LEFT JOIN users u ON l.sdr_id = u.id 
+                LEFT JOIN users u ON l.sdr_id = u.sdr_id 
                 WHERE LOWER(l.email) = LOWER(?) AND l.id != ?
             ');
             $stmt->execute([$lead['email'], $leadId]);
@@ -263,7 +263,7 @@ class LeadModel extends BaseModel {
             $stmt = $this->pdo->prepare('
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
-                LEFT JOIN users u ON l.sdr_id = u.id 
+                LEFT JOIN users u ON l.sdr_id = u.sdr_id 
                 WHERE REPLACE(l.phone, " ", "") = ? AND l.id != ?
             ');
             $stmt->execute([$normalizedPhone, $leadId]);
@@ -278,7 +278,7 @@ class LeadModel extends BaseModel {
             $stmt = $this->pdo->prepare('
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
-                LEFT JOIN users u ON l.sdr_id = u.id 
+                LEFT JOIN users u ON l.sdr_id = u.sdr_id 
                 WHERE LOWER(l.linkedin) = LOWER(?) AND l.id != ?
             ');
             $stmt->execute([$lead['linkedin'], $leadId]);
@@ -293,7 +293,7 @@ class LeadModel extends BaseModel {
             $stmt = $this->pdo->prepare('
             SELECT l.*, u.username as sdr_name 
                 FROM leads l 
-                LEFT JOIN users u ON l.sdr_id = u.id 
+                LEFT JOIN users u ON l.sdr_id = u.sdr_id 
                 WHERE LOWER(l.website) = LOWER(?) AND l.id != ?
                 ');
                 $stmt->execute([$lead['website'], $leadId]);
@@ -417,5 +417,52 @@ class LeadModel extends BaseModel {
             'duplicate' => (int)$pdo->query("SELECT COUNT(*) FROM leads WHERE duplicate_status='duplicate'")->fetchColumn(),
             'incomplete' => (int)$pdo->query("SELECT COUNT(*) FROM leads WHERE duplicate_status='incomplete'")->fetchColumn(),
         ];
+    }
+
+    // Filtered summary for dashboard (by sdr_id and/or dates)
+    public function getSummaryByFilters($filters = []){
+        $where = [];
+        $params = [];
+        if (!empty($filters['sdr_id'])) { $where[] = 'sdr_id = ?'; $params[] = $filters['sdr_id']; }
+        if (!empty($filters['date_from'])) { $where[] = 'date(created_at) >= ?'; $params[] = $filters['date_from']; }
+        if (!empty($filters['date_to'])) { $where[] = 'date(created_at) <= ?'; $params[] = $filters['date_to']; }
+        $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+        // pr('SELECT COUNT(*) FROM leads' . $whereSql,1);
+        // pr($params,1);
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $whereSql);
+        $stmt->execute($params);
+        $total = (int)$stmt->fetchColumn();
+        // pr( $total ,1);
+        // Helper to safely append extra condition
+        $buildWhere = function(string $extra) use ($whereSql){
+            if ($whereSql) return $whereSql . ' AND ' . $extra;
+            return ' WHERE ' . $extra;
+        };
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM leads" . $buildWhere("duplicate_status='unique'"));
+        $stmt->execute($params);
+        $unique = (int)$stmt->fetchColumn();
+
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM leads" . $buildWhere("duplicate_status='duplicate'"));
+        $stmt->execute($params);
+        $duplicate = (int)$stmt->fetchColumn();
+
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM leads" . $buildWhere("duplicate_status='incomplete'"));
+        $stmt->execute($params);
+        $incomplete = (int)$stmt->fetchColumn();
+
+        // Extra cards: counts by lead_source
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'linkedin'"));
+        $stmt->execute($params);
+        $linkedin = (int)$stmt->fetchColumn();
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'clutch'"));
+        $stmt->execute($params);
+        $clutch = (int)$stmt->fetchColumn();
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'gmb'"));
+        $stmt->execute($params);
+        $gmb = (int)$stmt->fetchColumn();
+
+        return compact('total','unique','duplicate','incomplete','linkedin','clutch','gmb');
     }
 }

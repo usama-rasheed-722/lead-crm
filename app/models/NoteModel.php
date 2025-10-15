@@ -42,16 +42,24 @@ class NoteModel extends BaseModel {
     }
     
     // Get recent activity for dashboard
-    public function getRecentActivity($limit = 10) {
-        $stmt = $this->pdo->prepare('
+    public function getRecentActivity($limit = 10, $filters = []) {
+        $where = [];
+        $params = [];
+        if (!empty($filters['sdr_id'])) { $where[] = 'l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
+        if (!empty($filters['date_from'])) { $where[] = 'date(ln.created_at) >= ?'; $params[] = $filters['date_from']; }
+        if (!empty($filters['date_to'])) { $where[] = 'date(ln.created_at) <= ?'; $params[] = $filters['date_to']; }
+        $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+        $sql = '
             SELECT ln.*, u.username, u.full_name, l.lead_id, l.name as lead_name, l.company
             FROM lead_notes ln 
             LEFT JOIN users u ON ln.user_id = u.id 
-            LEFT JOIN leads l ON ln.lead_id = l.id
+            LEFT JOIN leads l ON ln.lead_id = l.id' . $whereSql . '
             ORDER BY ln.created_at DESC 
             LIMIT ?
-        ');
-        $stmt->execute([$limit]);
+        ';
+        $stmt = $this->pdo->prepare($sql);
+        $params[] = (int)$limit;
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 }

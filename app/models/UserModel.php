@@ -21,23 +21,43 @@ class UserModel extends BaseModel {
     }
     
     public function create($data) {
-        $stmt = $this->pdo->prepare('INSERT INTO users (username, email, password, full_name, role) VALUES (?, ?, ?, ?, ?)');
+        // Enforce unique sdr_id at application layer
+        if (!empty($data['sdr_id'])) {
+            $stmt = $this->pdo->prepare('SELECT id FROM users WHERE sdr_id = ? LIMIT 1');
+            $stmt->execute([$data['sdr_id']]);
+            $existing = $stmt->fetch();
+            if ($existing) {
+                throw new Exception('SDR ID already in use by another user');
+            }
+        }
+        $stmt = $this->pdo->prepare('INSERT INTO users (username, email, password, full_name, role, sdr_id) VALUES (?, ?, ?, ?, ?, ?)');
         return $stmt->execute([
             $data['username'],
             $data['email'],
             $data['password'],
             $data['full_name'],
-            $data['role']
+            $data['role'],
+            $data['sdr_id'] ?? null
         ]);
     }
     
     public function update($id, $data) {
-        $stmt = $this->pdo->prepare('UPDATE users SET username = ?, email = ?, full_name = ?, role = ? WHERE id = ?');
+        // Enforce unique sdr_id at application layer
+        if (!empty($data['sdr_id'])) {
+            $stmt = $this->pdo->prepare('SELECT id FROM users WHERE sdr_id = ? AND id != ? LIMIT 1');
+            $stmt->execute([$data['sdr_id'], $id]);
+            $existing = $stmt->fetch();
+            if ($existing) {
+                throw new Exception('SDR ID already in use by another user');
+            }
+        }
+        $stmt = $this->pdo->prepare('UPDATE users SET username = ?, email = ?, full_name = ?, role = ?, sdr_id = ? WHERE id = ?');
         return $stmt->execute([
             $data['username'],
             $data['email'],
             $data['full_name'],
             $data['role'],
+            $data['sdr_id'] ?? null,
             $id
         ]);
     }
@@ -48,7 +68,7 @@ class UserModel extends BaseModel {
     }
     
     public function getSDRs() {
-        $stmt = $this->pdo->prepare('SELECT id, username, full_name FROM users WHERE role = "sdr" ORDER BY full_name');
+        $stmt = $this->pdo->prepare('SELECT id, username, full_name, sdr_id FROM users WHERE role = "sdr" ORDER BY full_name');
         $stmt->execute();
         return $stmt->fetchAll();
     }

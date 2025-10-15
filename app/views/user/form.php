@@ -62,6 +62,13 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="sdr_id" class="form-label">SDR ID</label>
+                        <input type="number" class="form-control" id="sdr_id" name="sdr_id"
+                               value="<?= htmlspecialchars($user['sdr_id'] ?? '') ?>" placeholder="Enter SDR code/number">
+                        <div class="form-text">Used to generate lead IDs and filter lead access.</div>
+                    </div>
+
                     <?php if ($action === 'create'): ?>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password *</label>

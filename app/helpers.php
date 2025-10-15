@@ -41,8 +41,8 @@ function pr(...$pre){
 }
 
 
-// Generate next SDR number for a user
-function generateNextSDR($userId) {
+// Generate next SDR number for an SDR code
+function generateNextSDR($sdrId) {
     $pdo = Database::getInstance()->getConnection();
     
     // Fetch the latest SDR ID for this user
@@ -53,7 +53,7 @@ function generateNextSDR($userId) {
         ORDER BY id DESC 
         LIMIT 1
     ');
-    $pattern = "SDR{$userId}-%";
+    $pattern = "SDR{$sdrId}-%";
     $stmt->execute([ $pattern]);
     $latestLead = $stmt->fetch();
     
@@ -61,7 +61,7 @@ function generateNextSDR($userId) {
     
     if ($latestLead && !empty($latestLead['lead_id'])) {
         // Extract numeric part using regex
-        if (preg_match('/SDR' . $userId . '-(\d+)/', $latestLead['lead_id'], $matches)) {
+        if (preg_match('/SDR' . $sdrId . '-(\d+)/', $latestLead['lead_id'], $matches)) {
             $lastNumber = (int) $matches[1];
             $nextNumber = $lastNumber + 1;
         }
@@ -71,13 +71,13 @@ function generateNextSDR($userId) {
     $formattedNumber = str_pad($nextNumber, 10, '0', STR_PAD_LEFT);
     
     // Final format: SDR{user_id}-00001
-    $newSDR = "SDR{$userId}-{$formattedNumber}";
+    $newSDR = "SDR{$sdrId}-{$formattedNumber}";
     
     return $newSDR;
 }
 
 // Generate SDR number for a specific lead
-function generateSDRNumber($leadId, $userId) {
+function generateSDRNumber($leadId, $sdrId) {
     $pdo = Database::getInstance()->getConnection();
     
     // Check if lead already has an SDR number
@@ -90,7 +90,7 @@ function generateSDRNumber($leadId, $userId) {
     }
     
     // Generate new SDR number
-    $sdrNumber = generateNextSDR($userId);
+    $sdrNumber = generateNextSDR($sdrId);
     
     // Update the lead with the new SDR number
     $stmt = $pdo->prepare('UPDATE leads SET lead_id = ? WHERE id = ?');

@@ -38,7 +38,7 @@
                     <option value="">All SDRs</option>
                     <?php foreach ($users as $user): ?>
                         <?php if ($user['role'] === 'sdr'): ?>
-                            <option value="<?= $user['id'] ?>" <?= ($filters['sdr_id'] ?? '') == $user['id'] ? 'selected' : '' ?>>
+                            <option value="<?= $user['sdr_id'] ?? $user['id'] ?>" <?= ($filters['sdr_id'] ?? '') == ($user['sdr_id'] ?? $user['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
                             </option>
                         <?php endif; ?>

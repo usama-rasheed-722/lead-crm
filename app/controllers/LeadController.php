@@ -30,7 +30,7 @@ class LeadController extends Controller {
         
         // Role-based filtering
         if ($user['role'] === 'sdr') {
-            $filters['sdr_id'] = $user['id'];
+            $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
         }
         
         $leads = $this->leadModel->search($search, $filters, $limit, $offset);
@@ -63,7 +63,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -98,7 +98,7 @@ class LeadController extends Controller {
         
         $data = [
             'name' => trim($_POST['name'] ?? ''),
-            'lead_id' => trim($_POST['lead_id'] ?? generateNextSDR(empty($_POST['sdr_id'])?$user['id']:$_POST['sdr_id'])),
+            'lead_id' => trim($_POST['lead_id'] ?? generateNextSDR(empty($_POST['sdr_id'])?($user['sdr_id'] ?? $user['id']):$_POST['sdr_id'])),
             'company' => trim($_POST['company'] ?? ''),
             'email' => trim($_POST['email'] ?? ''),
             'phone' => trim($_POST['phone'] ?? ''),
@@ -120,8 +120,8 @@ class LeadController extends Controller {
             'status' => trim($_POST['status'] ?? ''),
             'country' => trim($_POST['country'] ?? ''),
             'sdr_id' => $user['role'] === 'admin'
-                ? (empty($_POST['sdr_id']) ? (int)$user['id'] : (int)$_POST['sdr_id'])
-                : (int)$user['id'],
+                ? (empty($_POST['sdr_id']) ? (int)($user['sdr_id'] ?? $user['id']) : (int)$_POST['sdr_id'])
+                : (int)($user['sdr_id'] ?? $user['id']),
             'notes' => trim($_POST['notes'] ?? ''),
             'created_by' => $user['id']
         ];
@@ -154,7 +154,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -181,7 +181,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
             http_response_code(403);
             echo 'Access denied';
             exit;

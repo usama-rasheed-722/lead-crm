@@ -2,15 +2,34 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
-    <div>
-        <span class="badge bg-primary">Welcome, <?= htmlspecialchars(auth_user()['full_name'] ?? auth_user()['username']) ?></span>
-        <span class="badge bg-secondary"><?= ucfirst(auth_user()['role']) ?></span>
-    </div>
+    <form class="d-flex align-items-center" method="GET" action="index.php">
+        <input type="hidden" name="action" value="dashboard">
+        <?php if (in_array((auth_user()['role'] ?? ''), ['admin','manager'])): ?>
+        <div class="me-2">
+            <select class="form-select" name="sdr_id">
+                <option value="">All SDRs</option>
+                <?php foreach (($users ?? []) as $u): ?>
+                    <option value="<?= $u['sdr_id'] ?>" <?= (($selected_sdr_id ?? '') == ($u['sdr_id'])) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($u['full_name'] ?: $u['username']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+        <div class="me-2">
+            <input type="date" class="form-control" name="date_from" value="<?= htmlspecialchars($date_from ?? '') ?>" placeholder="From">
+        </div>
+        <div class="me-2">
+            <input type="date" class="form-control" name="date_to" value="<?= htmlspecialchars($date_to ?? '') ?>" placeholder="To">
+        </div>
+        <button type="submit" class="btn btn-outline-primary me-2">Apply</button>
+        <a href="index.php?action=dashboard" class="btn btn-outline-secondary">Clear</a>
+    </form>
 </div>
 
 <!-- Summary Cards -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card summary-card">
             <div class="card-body">
                 <div class="number text-primary"><?= $summary['total'] ?? 0 ?></div>
@@ -18,7 +37,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card summary-card">
             <div class="card-body">
                 <div class="number text-success"><?= $summary['unique'] ?? 0 ?></div>
@@ -26,7 +45,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card summary-card">
             <div class="card-body">
                 <div class="number text-warning"><?= $summary['duplicate'] ?? 0 ?></div>
@@ -34,11 +53,35 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card summary-card">
             <div class="card-body">
                 <div class="number text-danger"><?= $summary['incomplete'] ?? 0 ?></div>
                 <div class="label">Incomplete</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="number text-info"><?= $summary['linkedin'] ?? 0 ?></div>
+                <div class="label">LinkedIn</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="number text-info"><?= $summary['clutch'] ?? 0 ?></div>
+                <div class="label">Clutch</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mt-3">
+        <div class="card summary-card">
+            <div class="card-body">
+                <div class="number text-info"><?= $summary['gmb'] ?? 0 ?></div>
+                <div class="label">GMB</div>
             </div>
         </div>
     </div>
@@ -79,18 +122,12 @@
                                         <td><?= htmlspecialchars($lead['email'] ?: 'N/A') ?></td>
                                         <td>
                                             <?php
-                                            $statusClass = match($lead['duplicate_status']) {
-                                                'unique' => 'status-unique',
-                                                'duplicate' => 'status-duplicate',
-                                                'incomplete' => 'status-incomplete',
-                                                default => 'status-incomplete'
-                                            };
-                                            $statusIcon = match($lead['duplicate_status']) {
-                                                'unique' => '✅',
-                                                'duplicate' => '🔁',
-                                                'incomplete' => '⚠️',
-                                                default => '⚠️'
-                                            };
+                                            $statusClass = 'status-incomplete';
+                                            if ($lead['duplicate_status'] === 'unique') { $statusClass = 'status-unique'; }
+                                            elseif ($lead['duplicate_status'] === 'duplicate') { $statusClass = 'status-duplicate'; }
+                                            $statusIcon = '⚠️';
+                                            if ($lead['duplicate_status'] === 'unique') { $statusIcon = '✅'; }
+                                            elseif ($lead['duplicate_status'] === 'duplicate') { $statusIcon = '🔁'; }
                                             ?>
                                             <span class="status-badge <?= $statusClass ?>">
                                                 <?= $statusIcon ?> <?= ucfirst($lead['duplicate_status']) ?>
@@ -152,7 +189,13 @@
                 <?php foreach ($recentActivity as $activity): ?>
                     <div class="d-flex mb-3">
                         <div class="flex-shrink-0">
-                            <i class="fas fa-<?= match($activity['type']) { 'call' => 'phone', 'email' => 'envelope', 'update' => 'edit', default => 'sticky-note' } ?> text-primary"></i>
+                            <?php
+                            $icon = 'sticky-note';
+                            if ($activity['type'] === 'call') { $icon = 'phone'; }
+                            elseif ($activity['type'] === 'email') { $icon = 'envelope'; }
+                            elseif ($activity['type'] === 'update') { $icon = 'edit'; }
+                            ?>
+                            <i class="fas fa-<?= $icon ?> text-primary"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="small text-muted">
