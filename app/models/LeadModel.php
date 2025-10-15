@@ -118,6 +118,7 @@ class LeadModel extends BaseModel {
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
         if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
+        if(!empty($filters['lead_source'])){ $where[]='l.lead_source = ?'; $params[] = $filters['lead_source']; }
         if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
         if(!empty($filters['date_from'])){ $where[]='date(l.created_at) >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='date(l.created_at) <= ?'; $params[] = $filters['date_to']; }
@@ -144,6 +145,7 @@ class LeadModel extends BaseModel {
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
         if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
+        if(!empty($filters['lead_source'])){ $where[]='l.lead_source = ?'; $params[] = $filters['lead_source']; }
         if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
         if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }

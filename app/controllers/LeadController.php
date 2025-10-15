@@ -18,7 +18,8 @@ class LeadController extends Controller {
             'sdr_id' => $_GET['sdr_id'] ?? '',
             'duplicate_status' => $_GET['duplicate_status'] ?? '',
             'date_from' => $_GET['date_from'] ?? '',
-            'date_to' => $_GET['date_to'] ?? ''
+            'date_to' => $_GET['date_to'] ?? '',
+            'lead_source' => $_GET['lead_source'] ?? ''
         ];
         
         // Remove empty filters

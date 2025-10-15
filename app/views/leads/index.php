@@ -55,6 +55,17 @@
                 </select>
             </div>
             <div class="col-md-2">
+                <label for="lead_source" class="form-label">Lead Source</label>
+                <select class="form-select" id="lead_source" name="lead_source">
+                    <option value="">All Sources</option>
+                    <?php
+                    $sources = ['linkedin' => 'LinkedIn', 'clutch' => 'Clutch', 'gmb' => 'GMB'];
+                    foreach ($sources as $key => $label): ?>
+                        <option value="<?= $key ?>" <?= ($filters['lead_source'] ?? '') === $key ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label for="date_from" class="form-label">From Date</label>
                 <input type="date" class="form-control" id="date_from" name="date_from" 
                        value="<?= htmlspecialchars($filters['date_from'] ?? '') ?>">
@@ -88,10 +99,10 @@
                     <i class="fas fa-trash me-1"></i>Delete Selected
                 </button>
             <?php endif; ?>
-            <a href="index.php?action=export_csv" class="btn btn-sm btn-outline-success me-2">
+            <a href="index.php?action=export_csv&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
-            <a href="index.php?action=export_excel" class="btn btn-sm btn-outline-success">
+            <a href="index.php?action=export_excel&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success">
                 <i class="fas fa-file-excel me-1"></i>Export Excel
             </a>
         </div>

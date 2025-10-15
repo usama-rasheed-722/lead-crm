@@ -51,6 +51,13 @@ class ImportController extends Controller {
         if ($user['role'] === 'sdr') {
             $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
         }
+        // Carry over table filters from query
+        if (!empty($_GET['duplicate_status'])) { $filters['duplicate_status'] = $_GET['duplicate_status']; }
+        if (!empty($_GET['date_from'])) { $filters['date_from'] = $_GET['date_from']; }
+        if (!empty($_GET['date_to'])) { $filters['date_to'] = $_GET['date_to']; }
+        if (!empty($_GET['lead_source'])) { $filters['lead_source'] = $_GET['lead_source']; }
+        if (!empty($_GET['sdr_id'])) { $filters['sdr_id'] = $_GET['sdr_id']; }
+        if (!empty($_GET['search'])) { $search = $_GET['search']; } else { $search = ''; }
         
         $csv = $this->leadModel->exportCsv($filters);
         
@@ -69,6 +76,13 @@ class ImportController extends Controller {
         if ($user['role'] === 'sdr') {
             $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
         }
+        // Carry over table filters from query
+        if (!empty($_GET['duplicate_status'])) { $filters['duplicate_status'] = $_GET['duplicate_status']; }
+        if (!empty($_GET['date_from'])) { $filters['date_from'] = $_GET['date_from']; }
+        if (!empty($_GET['date_to'])) { $filters['date_to'] = $_GET['date_to']; }
+        if (!empty($_GET['lead_source'])) { $filters['lead_source'] = $_GET['lead_source']; }
+        if (!empty($_GET['sdr_id'])) { $filters['sdr_id'] = $_GET['sdr_id']; }
+        if (!empty($_GET['search'])) { $search = $_GET['search']; } else { $search = ''; }
         
         $csv = $this->leadModel->exportCsv($filters);
         
