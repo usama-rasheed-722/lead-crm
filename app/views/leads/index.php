@@ -26,11 +26,27 @@
     <form method="GET" action="index.php">
         <input type="hidden" name="action" value="leads">
         <div class="row g-3">
-            <div class="col-md-4">
-                <label for="search" class="form-label">Search</label>
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search All Fields</label>
                 <input type="text" class="form-control" id="search" name="search" 
                        value="<?= htmlspecialchars($search ?? '') ?>" 
-                       placeholder="Search by name, company, email, website...">
+                       placeholder="Search across all fields...">
+            </div>
+            <div class="col-md-3">
+                <label for="field_search" class="form-label">Search Specific Field</label>
+                <div class="input-group">
+                    <select class="form-select" id="field_type" name="field_type" style="max-width: 150px;">
+                        <option value="">Select Field</option>
+                        <?php if (!empty($availableFields)): foreach ($availableFields as $field): ?>
+                            <option value="<?= htmlspecialchars($field['value']) ?>" <?= ($filters['field_type'] ?? '') === $field['value'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($field['label']) ?>
+                            </option>
+                        <?php endforeach; endif; ?>
+                    </select>
+                    <input type="text" class="form-control" id="field_value" name="field_value" 
+                           value="<?= htmlspecialchars($filters['field_value'] ?? '') ?>" 
+                           placeholder="Enter value...">
+                </div>
             </div>
             <div class="col-md-2">
                 <label for="sdr_id" class="form-label">SDR</label>

@@ -20,7 +20,9 @@ class LeadController extends Controller {
             'date_from' => $_GET['date_from'] ?? '',
             'date_to' => $_GET['date_to'] ?? '',
             'lead_source' => $_GET['lead_source'] ?? '',
-            'status' => $_GET['status'] ?? ''
+            'status' => $_GET['status'] ?? '',
+            'field_type' => $_GET['field_type'] ?? '',
+            'field_value' => $_GET['field_value'] ?? ''
         ];
         
         // Remove empty filters
@@ -44,10 +46,14 @@ class LeadController extends Controller {
         $statusModel = new StatusModel();
         $statuses = $statusModel->all();
         
+        // Get available fields from leads table
+        $availableFields = $this->leadModel->getAvailableFields();
+        
         $this->view('leads/index', [
             'leads' => $leads,
             'users' => $users,
             'statuses' => $statuses,
+            'availableFields' => $availableFields,
             'search' => $search,
             'filters' => $filters,
             'page' => $page,

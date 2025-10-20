@@ -134,9 +134,24 @@ class LeadModel extends BaseModel {
         $where = [];
         $params = [];
         if($q){
-            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ?)";
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR l.lead_source LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
             $like = '%'.$q.'%';
-            for($i=0;$i<9;$i++) $params[] = $like;
+            for($i=0;$i<19;$i++) $params[] = $like;
+        }
+        
+        // Field-specific search
+        if(!empty($filters['field_type']) && !empty($filters['field_value'])){
+            $fieldType = $filters['field_type'];
+            $fieldValue = $filters['field_value'];
+            
+            // Get available fields to validate the field type
+            $availableFields = $this->getAvailableFields();
+            $validFields = array_column($availableFields, 'value');
+            
+            if(in_array($fieldType, $validFields)){
+                $where[] = "l.{$fieldType} LIKE ?";
+                $params[] = '%' . $fieldValue . '%';
+            }
         }
         // pr( $filters['date_from']);
         // pr( $filters['date_to'],1);
@@ -164,9 +179,24 @@ class LeadModel extends BaseModel {
         $where = [];
         $params = [];
         if($q){
-            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ?)";
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR l.lead_source LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
             $like = '%'.$q.'%';
-            for($i=0;$i<9;$i++) $params[] = $like;
+            for($i=0;$i<19;$i++) $params[] = $like;
+        }
+        
+        // Field-specific search
+        if(!empty($filters['field_type']) && !empty($filters['field_value'])){
+            $fieldType = $filters['field_type'];
+            $fieldValue = $filters['field_value'];
+            
+            // Get available fields to validate the field type
+            $availableFields = $this->getAvailableFields();
+            $validFields = array_column($availableFields, 'value');
+            
+            if(in_array($fieldType, $validFields)){
+                $where[] = "l.{$fieldType} LIKE ?";
+                $params[] = '%' . $fieldValue . '%';
+            }
         }
         if(!empty($filters['sdr_id'])){ $where[]='l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
@@ -595,5 +625,27 @@ class LeadModel extends BaseModel {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchColumn();
+    }
+
+    // Get available fields from leads table for dynamic field search
+    public function getAvailableFields() {
+        $stmt = $this->pdo->prepare("DESCRIBE leads");
+        $stmt->execute();
+        $columns = $stmt->fetchAll();
+        
+        $fields = [];
+        foreach ($columns as $column) {
+            $fieldName = $column['Field'];
+            // Skip system fields and IDs
+            if (!in_array($fieldName, ['id', 'created_at', 'updated_at', 'created_by', 'sdr_id'])) {
+                $displayName = ucwords(str_replace('_', ' ', $fieldName));
+                $fields[] = [
+                    'value' => $fieldName,
+                    'label' => $displayName
+                ];
+            }
+        }
+        
+        return $fields;
     }
 }
