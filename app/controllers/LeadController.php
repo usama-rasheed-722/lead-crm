@@ -19,7 +19,8 @@ class LeadController extends Controller {
             'duplicate_status' => $_GET['duplicate_status'] ?? '',
             'date_from' => $_GET['date_from'] ?? '',
             'date_to' => $_GET['date_to'] ?? '',
-            'lead_source' => $_GET['lead_source'] ?? ''
+            'lead_source' => $_GET['lead_source'] ?? '',
+            'status' => $_GET['status'] ?? ''
         ];
         
         // Remove empty filters
@@ -39,9 +40,14 @@ class LeadController extends Controller {
         $totalPages = max(1, (int)ceil($total / $limit));
         $users = $this->userModel->all();
         
+        // Load statuses for filters and bulk update
+        $statusModel = new StatusModel();
+        $statuses = $statusModel->all();
+        
         $this->view('leads/index', [
             'leads' => $leads,
             'users' => $users,
+            'statuses' => $statuses,
             'search' => $search,
             'filters' => $filters,
             'page' => $page,
@@ -73,10 +79,15 @@ class LeadController extends Controller {
         // Get lead notes
         $noteModel = new NoteModel();
         $notes = $noteModel->getByLeadId($id);
+
+        // Get status history
+        $historyModel = new ContactStatusHistoryModel();
+        $statusHistory = $historyModel->getByLeadId($id);
         
         $this->view('leads/view', [
             'lead' => $lead,
-            'notes' => $notes
+            'notes' => $notes,
+            'statusHistory' => $statusHistory
         ]);
     }
     
@@ -377,6 +388,87 @@ class LeadController extends Controller {
             $this->redirect("index.php?action=lead_view&id={$id}&success=" . urlencode('Successfully merged ' . count($duplicateIds) . ' duplicate lead(s)'));
         } catch (Exception $e) {
             $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('Failed to merge duplicates: ' . $e->getMessage()));
+        }
+    }
+    
+    // New leads management page with specific columns
+    public function leadsManagement() {
+        $user = auth_user();
+        $filters = [
+            'sdr_id' => $_GET['sdr_id'] ?? '',
+            'status' => $_GET['status'] ?? ''
+        ];
+        
+        // Remove empty filters
+        $filters = array_filter($filters);
+        
+        // Role-based filtering
+        if ($user['role'] === 'sdr') {
+            $filters['sdr_id'] = $user['sdr_id'] ?? $user['id'];
+        }
+        
+        $page = (int)($_GET['page'] ?? 1);
+        $limit = 100;
+        $offset = ($page - 1) * $limit;
+        
+        $leads = $this->leadModel->getLeadsForManagement($limit, $offset, $filters);
+        $total = $this->leadModel->countLeadsForManagement($filters);
+        $totalPages = max(1, (int)ceil($total / $limit));
+        
+        // Get statuses for dropdown
+        $statusModel = new StatusModel();
+        $statuses = $statusModel->all();
+        
+        // Get users for SDR filter
+        $users = $this->userModel->all();
+        
+        $this->view('leads/management', [
+            'leads' => $leads,
+            'statuses' => $statuses,
+            'users' => $users,
+            'filters' => $filters,
+            'page' => $page,
+            'total' => $total,
+            'totalPages' => $totalPages,
+            'limit' => $limit
+        ]);
+    }
+    
+    // Bulk update status
+    public function bulkUpdateStatus() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $user = auth_user();
+        $leadIds = $_POST['lead_ids'] ?? '';
+        $newStatus = trim($_POST['new_status'] ?? '');
+        
+        if (empty($leadIds) || empty($newStatus)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected or status not specified'));
+        }
+        
+        $ids = array_filter(array_map('intval', explode(',', $leadIds)));
+        if (empty($ids)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+        }
+        
+        // Check permissions for each lead
+        if ($user['role'] === 'sdr') {
+            $userSdrId = $user['sdr_id'] ?? $user['id'];
+            foreach ($ids as $leadId) {
+                $lead = $this->leadModel->getById($leadId);
+                if (!$lead || $lead['sdr_id'] != $userSdrId) {
+                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads'));
+                }
+            }
+        }
+        
+        try {
+            $this->leadModel->bulkUpdateStatus($ids, $newStatus, $user['id']);
+            $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
         }
     }
 }

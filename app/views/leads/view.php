@@ -37,16 +37,16 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Lead Information</h5>
-                <span class="badge bg-<?= match($lead['duplicate_status']) { 'success' => 'success', 'warning' => 'warning', 'danger' => 'danger', default => 'secondary' } ?>">
-                    <?php
-                    $statusIcon = match($lead['duplicate_status']) {
-                        'unique' => '✅',
-                        'duplicate' => '🔁',
-                        'incomplete' => '⚠️',
-                        default => '❓'
-                    };
-                    echo $statusIcon . ' ' . ucfirst($lead['duplicate_status']);
-                    ?>
+                <?php
+                $dup = $lead['duplicate_status'];
+                $dupClass = 'secondary';
+                $dupIcon = '❓';
+                if ($dup === 'unique') { $dupClass = 'success'; $dupIcon = '✅'; }
+                elseif ($dup === 'duplicate') { $dupClass = 'warning'; $dupIcon = '🔁'; }
+                elseif ($dup === 'incomplete') { $dupClass = 'danger'; $dupIcon = '⚠️'; }
+                ?>
+                <span class="badge bg-<?= $dupClass ?>">
+                    <?= $dupIcon ?> <?= ucfirst($dup) ?>
                 </span>
             </div>
             <div class="card-body">
@@ -271,6 +271,39 @@
                 </form>
             </div>
         </div>
+
+        <!-- Status History -->
+        <?php if (!empty($statusHistory)): ?>
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Status History</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Changed At</th>
+                                <th>Old</th>
+                                <th>New</th>
+                                <th>By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($statusHistory as $h): ?>
+                                <tr>
+                                    <td><?= date('Y-m-d H:i', strtotime($h['changed_at'])) ?></td>
+                                    <td><?= htmlspecialchars($h['old_status'] ?: '—') ?></td>
+                                    <td><span class="badge bg-secondary"><?= htmlspecialchars($h['new_status']) ?></span></td>
+                                    <td><?= htmlspecialchars($h['full_name'] ?: $h['username'] ?: 'System') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -286,7 +319,13 @@
                 <?php foreach ($notes as $note): ?>
                     <div class="note-item">
                         <div class="note-meta">
-                            <i class="fas fa-<?= match($note['type']) { 'call' => 'phone', 'email' => 'envelope', 'update' => 'edit', default => 'sticky-note' } ?> me-1"></i>
+                            <?php
+                            $icon = 'sticky-note';
+                            if ($note['type'] === 'call') $icon = 'phone';
+                            elseif ($note['type'] === 'email') $icon = 'envelope';
+                            elseif ($note['type'] === 'update') $icon = 'edit';
+                            ?>
+                            <i class="fas fa-<?= $icon ?> me-1"></i>
                             <strong><?= ucfirst($note['type']) ?></strong> by 
                             <?= htmlspecialchars($note['full_name'] ?: $note['username']) ?> 
                             on <?= date('M j, Y g:i A', strtotime($note['created_at'])) ?>

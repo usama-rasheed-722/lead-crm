@@ -58,7 +58,7 @@
                         <li class="nav-item">
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'leads' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=leads') ?>">
-                                <i class="fas fa-users me-2"></i>Leads
+                                <i class="fas fa-users me-2"></i>All Leads
                             </a>
                         </li>
                         <li class="nav-item">
@@ -72,6 +72,12 @@
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'users' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=users') ?>">
                                 <i class="fas fa-user-cog me-2"></i>Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'status_management' ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=status_management') ?>">
+                                <i class="fas fa-tags me-2"></i>Status Management
                             </a>
                         </li>
                         <?php endif; ?>

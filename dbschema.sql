@@ -66,8 +66,40 @@ FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 
+-- Status management table
+CREATE TABLE status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Contact status history table
+CREATE TABLE contact_status_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    lead_id INT NOT NULL,
+    old_status VARCHAR(100) DEFAULT NULL,
+    new_status VARCHAR(100) NOT NULL,
+    changed_by INT NOT NULL,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Insert default statuses
+INSERT INTO status (name) VALUES 
+('New Lead'),
+('Email Contact'),
+('Responded'),
+('Qualified'),
+('Unqualified'),
+('Converted'),
+('Lost');
+
 -- Indexes for faster searching
 CREATE INDEX idx_leads_email ON leads(email);
 CREATE INDEX idx_leads_phone ON leads(phone);
 CREATE INDEX idx_leads_leadid ON leads(lead_id);
 CREATE INDEX idx_leads_sdr ON leads(sdr_id);
+CREATE INDEX idx_contact_status_history_lead_id ON contact_status_history(lead_id);
+CREATE INDEX idx_contact_status_history_changed_by ON contact_status_history(changed_by);
+CREATE INDEX idx_contact_status_history_changed_at ON contact_status_history(changed_at);

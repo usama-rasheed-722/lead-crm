@@ -74,6 +74,33 @@ switch ($action) {
     case 'merge_duplicates':
         (new LeadController())->mergeDuplicates($_GET['id'] ?? null);
         break;
+    case 'leads_management':
+        (new LeadController())->leadsManagement();
+        break;
+    case 'bulk_update_status':
+        (new LeadController())->bulkUpdateStatus();
+        break;
+    case 'status_management':
+        (new StatusController())->index();
+        break;
+    case 'status_add':
+        (new StatusController())->create();
+        break;
+    case 'status_store':
+        (new StatusController())->store();
+        break;
+    case 'status_edit':
+        (new StatusController())->edit($_GET['id'] ?? null);
+        break;
+    case 'status_update':
+        (new StatusController())->update($_GET['id'] ?? null);
+        break;
+    case 'status_delete':
+        (new StatusController())->delete($_GET['id'] ?? null);
+        break;
+    case 'get_statuses':
+        (new StatusController())->getStatuses();
+        break;
     case 'import':
         (new ImportController())->index();
         break;

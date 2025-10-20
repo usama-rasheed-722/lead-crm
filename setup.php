@@ -112,12 +112,12 @@ try {
         ]
     ];
     
-    $stmt = $pdo->prepare('INSERT INTO leads (lead_id, name, company, email, phone, linkedin, website, clutch, sdr_id, duplicate_status, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO leads (lead_id, name, company, email, phone, linkedin, website, clutch, sdr_id, duplicate_status, notes, created_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     foreach ($leads as $lead) {
         $stmt->execute([
             $lead['lead_id'], $lead['name'], $lead['company'], $lead['email'], 
             $lead['phone'], $lead['linkedin'], $lead['website'], $lead['clutch'], 
-            $lead['sdr_id'], $lead['duplicate_status'], $lead['notes'], $lead['created_by']
+            $lead['sdr_id'], $lead['duplicate_status'], $lead['notes'], $lead['created_by'], 'New Lead'
         ]);
     }
     
