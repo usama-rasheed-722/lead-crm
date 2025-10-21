@@ -125,6 +125,27 @@ switch ($action) {
     case 'set_status_as_default':
         (new StatusController())->setAsDefault($_GET['id'] ?? null);
         break;
+    case 'lead_sources':
+        (new LeadSourceController())->index();
+        break;
+    case 'lead_source_create':
+        (new LeadSourceController())->create();
+        break;
+    case 'lead_source_store':
+        (new LeadSourceController())->store();
+        break;
+    case 'lead_source_edit':
+        (new LeadSourceController())->edit();
+        break;
+    case 'lead_source_update':
+        (new LeadSourceController())->update();
+        break;
+    case 'lead_source_delete':
+        (new LeadSourceController())->delete();
+        break;
+    case 'lead_source_toggle_active':
+        (new LeadSourceController())->toggleActive();
+        break;
     case 'import':
         (new ImportController())->index();
         break;

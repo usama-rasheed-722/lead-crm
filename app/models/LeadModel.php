@@ -18,11 +18,11 @@ class LeadModel extends BaseModel {
         INSERT INTO leads (
             lead_id, name, company, email, phone, linkedin, website, clutch,
             sdr_id, duplicate_status, notes, created_by,
-              lead_owner, contact_name, job_title, industry, lead_source,
+              lead_owner, contact_name, job_title, industry, lead_source, lead_source_id,
             tier, lead_status, insta, social_profile, address, description_information,
             whatsapp, next_step, other, status, country, sdr_name
         )
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ");
     
         $stmt->execute([
@@ -34,6 +34,7 @@ class LeadModel extends BaseModel {
             $data['job_title'] ?? null,
             $data['industry'] ?? null,
             $data['lead_source'] ?? null,
+            $data['lead_source_id'] ?? null,
             $data['tier'] ?? null,
             $data['lead_status'] ?? null,
             $data['insta'] ?? null,
@@ -255,18 +256,33 @@ class LeadModel extends BaseModel {
     }
 
     // Bulk insert (CSV import)
-    public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id, $statuses){
-        
-        
+    public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id){
         $this->pdo->beginTransaction();
         $leadIds = [];
+        
         try{
+            // Get lead source mapping
+            $leadSourceModel = new LeadSourceModel();
+            $leadSources = $leadSourceModel->getActive();
+            $leadSourceMap = [];
+            foreach ($leadSources as $source) {
+                $leadSourceMap[$source['name']] = $source['id'];
+            }
+            
             foreach($rows as $r){
                 $sdr_id = $r['sdr_id'] ?? $current_user_sdr_id;
-                $r['sdr_id'] =  $current_user_sdr_id;
+                $r['sdr_id'] = $current_user_sdr_id;
                 $r['lead_id'] = $this->generateLeadId($sdr_id);
-                $r['status'] = getIdByName($statuses, $r['status']);
                 $r['created_by'] = $created_by_user_id;
+                
+                // Handle lead source mapping
+                if (isset($r['lead_source']) && !empty($r['lead_source'])) {
+                    if (isset($leadSourceMap[$r['lead_source']])) {
+                        $r['lead_source_id'] = $leadSourceMap[$r['lead_source']];
+                    }
+                    // Keep the original lead_source field for backward compatibility
+                }
+                
                 $id = $this->create($r);
                 $leadIds[] = $id;
             }
@@ -275,7 +291,7 @@ class LeadModel extends BaseModel {
             $this->pdo->rollBack();
             throw $e;
         }
-        return $leadIds;
+        return count($leadIds);
     }
 
     // Export all leads to CSV (returns CSV string)

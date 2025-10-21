@@ -37,6 +37,7 @@ CREATE TABLE leads (
     job_title VARCHAR(255) DEFAULT NULL,
     industry VARCHAR(255) DEFAULT NULL,
     lead_source VARCHAR(255) DEFAULT NULL,
+    lead_source_id INT DEFAULT NULL,
     tier VARCHAR(50) DEFAULT NULL,
     lead_status VARCHAR(100) DEFAULT NULL,
     insta VARCHAR(255) DEFAULT NULL,
@@ -50,7 +51,8 @@ CREATE TABLE leads (
     country VARCHAR(100) DEFAULT NULL,
     sdr_name VARCHAR(255) DEFAULT NULL,
  
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (lead_source_id) REFERENCES lead_sources(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 
@@ -73,6 +75,16 @@ CREATE TABLE status (
     restrict_bulk_update BOOLEAN DEFAULT FALSE,
     is_default BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Lead source management table
+CREATE TABLE lead_sources (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT DEFAULT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Contact status history table
@@ -104,7 +116,7 @@ CREATE TABLE status_custom_fields (
 ) ENGINE=InnoDB;
 
 -- Insert default statuses
-INSERT INTO status (name, is_default) VALUES 
+INSERT INTO status (name, is_default) VALUES
 ('New Lead', TRUE),
 ('Email Contact', FALSE),
 ('Responded', FALSE),
@@ -112,6 +124,17 @@ INSERT INTO status (name, is_default) VALUES
 ('Unqualified', FALSE),
 ('Converted', FALSE),
 ('Lost', FALSE);
+
+-- Insert default lead sources
+INSERT INTO lead_sources (name, description) VALUES
+('Website', 'Leads from company website'),
+('Referral', 'Leads from referrals'),
+('Social Media', 'Leads from social media platforms'),
+('Email Campaign', 'Leads from email marketing campaigns'),
+('Cold Outreach', 'Leads from cold calling or outreach'),
+('Trade Show', 'Leads from trade shows and events'),
+('Partner', 'Leads from business partners'),
+('Other', 'Other lead sources');
 
 -- Indexes for faster searching
 CREATE INDEX idx_leads_email ON leads(email);
@@ -122,3 +145,6 @@ CREATE INDEX idx_contact_status_history_lead_id ON contact_status_history(lead_i
 CREATE INDEX idx_contact_status_history_changed_by ON contact_status_history(changed_by);
 CREATE INDEX idx_contact_status_history_changed_at ON contact_status_history(changed_at);
 CREATE INDEX idx_status_custom_fields_status_id ON status_custom_fields(status_id);
+CREATE INDEX idx_lead_sources_name ON lead_sources(name);
+CREATE INDEX idx_lead_sources_active ON lead_sources(is_active);
+CREATE INDEX idx_leads_lead_source_id ON leads(lead_source_id);

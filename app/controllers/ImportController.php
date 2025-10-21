@@ -3,11 +3,13 @@
 class ImportController extends Controller {
     protected $leadModel;
     protected $statusModel;
+    protected $leadSourceModel;
     
     public function __construct() {
         parent::__construct();
         $this->leadModel = new LeadModel();
         $this->statusModel = new StatusModel();
+        $this->leadSourceModel = new LeadSourceModel();
     }
     
     // Show import page
@@ -33,15 +35,59 @@ class ImportController extends Controller {
             $this->redirect('index.php?action=import&error=' . urlencode('Please upload a CSV or Excel file'));
         }
         
-        $statuses = $this->statusModel->all();
-
         try {
             $data = $this->parseFile($file['tmp_name'], $fileExtension);
-            $importedCount = $this->leadModel->bulkInsert($data, $user['id'], $user['sdr_id'] ?? $user['id'], $statuses);
+            
+            // Validate data before import
+            $this->validateImportData($data);
+            
+            $importedCount = $this->leadModel->bulkInsert($data, $user['id'], $user['sdr_id'] ?? $user['id']);
             
             $this->redirect('index.php?action=import&success=' . urlencode("Successfully imported {$importedCount} leads"));
         } catch (Exception $e) {
             $this->redirect('index.php?action=import&error=' . urlencode('Import failed: ' . $e->getMessage()));
+        }
+    }
+    
+    // Validate import data
+    private function validateImportData($data) {
+        if (empty($data)) {
+            throw new Exception('No data found in the uploaded file.');
+        }
+        
+        // Get all valid statuses and lead sources
+        $statuses = $this->statusModel->all();
+        $leadSources = $this->leadSourceModel->getActive();
+        
+        $validStatusNames = array_column($statuses, 'name');
+        $validLeadSourceNames = array_column($leadSources, 'name');
+        
+        $errors = [];
+        
+        foreach ($data as $index => $row) {
+            $rowNumber = $index + 1;
+            
+            // Validate status
+            if (isset($row['status']) && !empty($row['status'])) {
+                if (!in_array($row['status'], $validStatusNames)) {
+                    $errors[] = "Row {$rowNumber}: Invalid status '{$row['status']}'. Valid statuses are: " . implode(', ', $validStatusNames);
+                }
+            }
+            
+            // Validate lead source
+            if (isset($row['lead_source']) && !empty($row['lead_source'])) {
+                if (!in_array($row['lead_source'], $validLeadSourceNames)) {
+                    $errors[] = "Row {$rowNumber}: Invalid lead source '{$row['lead_source']}'. Valid lead sources are: " . implode(', ', $validLeadSourceNames);
+                }
+            }
+        }
+        
+        if (!empty($errors)) {
+            $errorMessage = "Validation failed:\n" . implode("\n", array_slice($errors, 0, 10));
+            if (count($errors) > 10) {
+                $errorMessage .= "\n... and " . (count($errors) - 10) . " more errors.";
+            }
+            throw new Exception($errorMessage);
         }
     }
     

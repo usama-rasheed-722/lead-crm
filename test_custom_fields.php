@@ -87,8 +87,7 @@ function testDatabase() {
     echo "Testing Database Custom Fields Table...\n\n";
     
     try {
-        $db = new Database();
-        $pdo = $db->getConnection();
+        $pdo = Database::getInstance()->getConnection();
         
         // Check if custom fields table exists
         $stmt = $pdo->query("SHOW TABLES LIKE 'status_custom_fields'");

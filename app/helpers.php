@@ -102,13 +102,13 @@ function generateSDRNumber($leadId, $sdrId) {
 
 function getIdByName(array $data, string $name): ?int
 { 
-    if (!isset($data[0]) || !is_array($data[0])) {
+    if (empty($data) || !is_array($data)) {
         return null;
     }
  
-    foreach ($data[0] as $item) {
+    foreach ($data as $item) {
         if (isset($item['name']) && strtolower($item['name']) === strtolower($name)) {
-            return $item['name'] ?? null;
+            return $item['id'] ?? null;
         }
     }
  

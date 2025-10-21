@@ -174,6 +174,12 @@
                         <a href="index.php?action=users" class="btn btn-outline-secondary">
                             <i class="fas fa-users me-2"></i>Manage Users
                         </a>
+                        <a href="index.php?action=status_management" class="btn btn-outline-info">
+                            <i class="fas fa-flag me-2"></i>Status Management
+                        </a>
+                        <a href="index.php?action=lead_sources" class="btn btn-outline-warning">
+                            <i class="fas fa-tags me-2"></i>Lead Sources
+                        </a>
                     <?php endif; ?>
                 </div>
             </div>
