@@ -33,6 +33,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
+                            <th>Type</th>
                             <th>Created At</th>
                             <th>Actions</th>
                         </tr>
@@ -46,9 +47,34 @@
                                         <?= htmlspecialchars($status['name']) ?>
                                     </span>
                                 </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <?php if ($status['is_default']): ?>
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-star me-1"></i>Default
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($status['restrict_bulk_update']): ?>
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-ban me-1"></i>No Bulk
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if (!$status['is_default'] && !$status['restrict_bulk_update']): ?>
+                                            <span class="badge bg-light text-dark">Standard</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
                                 <td><?= date('Y-m-d H:i:s', strtotime($status['created_at'])) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
+                                        <?php if (!$status['is_default']): ?>
+                                            <button type="button" class="btn btn-outline-success btn-set-default" 
+                                                    data-status-id="<?= $status['id'] ?>" 
+                                                    data-status-name="<?= htmlspecialchars($status['name']) ?>"
+                                                    title="Set as Default">
+                                                <i class="fas fa-star"></i>
+                                            </button>
+                                        <?php endif; ?>
                                         <a href="index.php?action=status_edit&id=<?= $status['id'] ?>" 
                                            class="btn btn-outline-primary" title="Edit">
                                             <i class="fas fa-edit"></i>
@@ -84,6 +110,31 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function(e) {
             if (!confirm('Are you sure you want to delete this status? This action cannot be undone.')) {
                 e.preventDefault();
+            }
+        });
+    });
+    
+    // Set as default functionality
+    document.querySelectorAll('.btn-set-default').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const statusId = this.dataset.statusId;
+            const statusName = this.dataset.statusName;
+            
+            if (confirm(`Are you sure you want to set "${statusName}" as the default status? This will unset any current default status.`)) {
+                fetch(`index.php?action=set_status_as_default&id=${statusId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reload the page to show updated status
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (data.error || 'Failed to set status as default'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error: Failed to set status as default');
+                    });
             }
         });
     });

@@ -80,6 +80,18 @@ switch ($action) {
     case 'bulk_update_status':
         (new LeadController())->bulkUpdateStatus();
         break;
+    case 'bulk_update_status_with_custom_fields':
+        (new LeadController())->bulkUpdateStatusWithCustomFields();
+        break;
+    case 'update_status_with_custom_fields':
+        (new LeadController())->updateStatusWithCustomFields();
+        break;
+    case 'get_custom_fields_for_status':
+        (new LeadController())->getCustomFieldsForStatus();
+        break;
+    case 'lead_status_history':
+        (new LeadController())->statusHistory();
+        break;
     case 'status_management':
         (new StatusController())->index();
         break;
@@ -100,6 +112,18 @@ switch ($action) {
         break;
     case 'get_statuses':
         (new StatusController())->getStatuses();
+        break;
+    case 'create_custom_field':
+        (new StatusController())->createCustomField();
+        break;
+    case 'update_custom_field':
+        (new StatusController())->updateCustomField($_GET['id'] ?? null);
+        break;
+    case 'delete_custom_field':
+        (new StatusController())->deleteCustomField($_GET['id'] ?? null);
+        break;
+    case 'set_status_as_default':
+        (new StatusController())->setAsDefault($_GET['id'] ?? null);
         break;
     case 'import':
         (new ImportController())->index();

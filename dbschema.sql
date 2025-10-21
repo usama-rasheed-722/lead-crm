@@ -70,6 +70,8 @@ FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
 CREATE TABLE status (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
+    restrict_bulk_update BOOLEAN DEFAULT FALSE,
+    is_default BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -80,20 +82,36 @@ CREATE TABLE contact_status_history (
     old_status VARCHAR(100) DEFAULT NULL,
     new_status VARCHAR(100) NOT NULL,
     changed_by INT NOT NULL,
+    custom_fields_data JSON DEFAULT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
     FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Custom status fields table
+CREATE TABLE status_custom_fields (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    status_id INT NOT NULL,
+    field_name VARCHAR(100) NOT NULL,
+    field_label VARCHAR(255) NOT NULL,
+    field_type ENUM('text', 'textarea', 'select', 'date', 'number', 'email', 'url') NOT NULL DEFAULT 'text',
+    field_options TEXT DEFAULT NULL,
+    is_required BOOLEAN DEFAULT FALSE,
+    field_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (status_id) REFERENCES status(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_status_field (status_id, field_name)
+) ENGINE=InnoDB;
+
 -- Insert default statuses
-INSERT INTO status (name) VALUES 
-('New Lead'),
-('Email Contact'),
-('Responded'),
-('Qualified'),
-('Unqualified'),
-('Converted'),
-('Lost');
+INSERT INTO status (name, is_default) VALUES 
+('New Lead', TRUE),
+('Email Contact', FALSE),
+('Responded', FALSE),
+('Qualified', FALSE),
+('Unqualified', FALSE),
+('Converted', FALSE),
+('Lost', FALSE);
 
 -- Indexes for faster searching
 CREATE INDEX idx_leads_email ON leads(email);
@@ -103,3 +121,4 @@ CREATE INDEX idx_leads_sdr ON leads(sdr_id);
 CREATE INDEX idx_contact_status_history_lead_id ON contact_status_history(lead_id);
 CREATE INDEX idx_contact_status_history_changed_by ON contact_status_history(changed_by);
 CREATE INDEX idx_contact_status_history_changed_at ON contact_status_history(changed_at);
+CREATE INDEX idx_status_custom_fields_status_id ON status_custom_fields(status_id);

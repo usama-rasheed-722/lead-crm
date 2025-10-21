@@ -2,10 +2,12 @@
 // app/controllers/ImportController.php
 class ImportController extends Controller {
     protected $leadModel;
+    protected $statusModel;
     
     public function __construct() {
         parent::__construct();
         $this->leadModel = new LeadModel();
+        $this->statusModel = new StatusModel();
     }
     
     // Show import page
@@ -18,7 +20,6 @@ class ImportController extends Controller {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('index.php?action=import');
         }
-        
         $user = auth_user();
         
         if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
@@ -32,9 +33,11 @@ class ImportController extends Controller {
             $this->redirect('index.php?action=import&error=' . urlencode('Please upload a CSV or Excel file'));
         }
         
+        $statuses = $this->statusModel->all();
+
         try {
             $data = $this->parseFile($file['tmp_name'], $fileExtension);
-            $importedCount = $this->leadModel->bulkInsert($data, $user['id'], $user['sdr_id'] ?? $user['id']);
+            $importedCount = $this->leadModel->bulkInsert($data, $user['id'], $user['sdr_id'] ?? $user['id'], $statuses);
             
             $this->redirect('index.php?action=import&success=' . urlencode("Successfully imported {$importedCount} leads"));
         } catch (Exception $e) {

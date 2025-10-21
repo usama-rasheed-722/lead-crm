@@ -214,39 +214,241 @@
 
 <!-- Bulk Update Status Modal -->
 <div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bulkUpdateModalLabel">Bulk Update Status</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="bulkUpdateModalLabel">
+                    <i class="fas fa-users me-2"></i>Bulk Update Status
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status">
+            <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status_with_custom_fields">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="new_status" class="form-label">New Status</label>
-                        <select class="form-select" id="new_status" name="new_status" required>
-                            <option value="">Select Status</option>
-                            <?php foreach ($statuses as $status): ?>
-                                <option value="<?= htmlspecialchars($status['name']) ?>">
-                                    <?= htmlspecialchars($status['name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <!-- Selected Leads Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="card border-primary">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-list me-2"></i>Selected Leads Summary
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-primary mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        You are about to update the status for <strong><span id="selectedCount">0</span> selected lead(s)</strong>.
+                                    </div>
+                                    <div id="selectedLeadsList" class="small text-muted">
+                                        <!-- Selected leads will be listed here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-cog me-2"></i>Update Settings
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sendNotification" name="send_notification" checked>
+                                        <label class="form-check-label" for="sendNotification">
+                                            Send notification email
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="addNote" name="add_note">
+                                        <label class="form-check-label" for="addNote">
+                                            Add note to leads
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        This will update the status for <span id="selectedCount">0</span> selected lead(s).
+
+                    <!-- Status Selection -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-flag me-2"></i>Status Selection
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="new_status" class="form-label fw-bold">New Status</label>
+                                        <select class="form-select form-select-lg" id="new_status" name="new_status" required>
+                                            <option value="">Select Status</option>
+                                            <?php 
+                                            $statusModel = new StatusModel();
+                                            foreach ($statuses as $status): ?>
+                                                <?php if (!$status['restrict_bulk_update']): 
+                                                    $customFields = $statusModel->getCustomFieldsByName($status['name']);
+                                                    $hasFields = count($customFields) > 0;
+                                                ?>
+                                                    <option value="<?= htmlspecialchars($status['name']) ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                                        <?= htmlspecialchars($status['name']) ?><?= $hasFields ? ' 📝' : '' ?>
+                                                    </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle text-info me-1"></i>
+                                            Only statuses that allow bulk updates are shown. 
+                                            <span class="text-muted">📝 indicates statuses that require additional information</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Status Information
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="statusInfo" class="text-muted">
+                                        <p class="mb-2">
+                                            <i class="fas fa-arrow-right me-2"></i>
+                                            Select a status to see additional information and required fields.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Custom Fields Container -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div id="bulkCustomFieldsContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Options -->
+                    <div class="row mt-3" id="additionalOptions" style="display: none;">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-plus me-2"></i>Additional Options
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="bulkNote" class="form-label">Note (Optional)</label>
+                                                <textarea class="form-control" id="bulkNote" name="bulk_note" rows="3" placeholder="Add a note to all selected leads..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="bulkTags" class="form-label">Tags (Optional)</label>
+                                                <input type="text" class="form-control" id="bulkTags" name="bulk_tags" placeholder="Enter tags separated by commas...">
+                                                <div class="form-text">Tags will be added to all selected leads</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Status</button>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sync me-2"></i>Update Status for <span id="submitCount">0</span> Lead(s)
+                    </button>
                 </div>
                 <input type="hidden" name="lead_ids" id="bulkUpdateIds">
             </form>
         </div>
     </div>
 </div>
+
+<style>
+.custom-field-container {
+    border-left: 3px solid #0d6efd;
+    padding-left: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    border-radius: 0 5px 5px 0;
+    padding: 15px;
+}
+
+.custom-field-container .form-label {
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.custom-field-container .form-control,
+.custom-field-container .form-select {
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.custom-field-container .form-control:focus,
+.custom-field-container .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.status-with-fields {
+    font-weight: 600;
+}
+
+.loading-custom-fields {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.modal-xl {
+    max-width: 1200px;
+}
+
+.bulk-modal .card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.bulk-modal .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.bulk-modal .form-select-lg {
+    padding: 0.75rem 1rem;
+    font-size: 1.1rem;
+}
+
+.bulk-modal .alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.selected-lead-item {
+    transition: background-color 0.2s ease;
+}
+
+.selected-lead-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -311,8 +513,182 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const ids = Array.from(checkedBoxes).map(cb => cb.value);
             bulkUpdateIds.value = ids.join(',');
+            
+            // Update selected leads list
+            updateSelectedLeadsList(checkedBoxes);
+            
+            // Update submit button count
+            document.getElementById('submitCount').textContent = checkedBoxes.length;
+            
             bulkUpdateModal.show();
         });
+    }
+    
+    function updateSelectedLeadsList(checkedBoxes) {
+        const selectedLeadsList = document.getElementById('selectedLeadsList');
+        let leadsList = '<div class="row">';
+        
+        checkedBoxes.forEach((checkbox, index) => {
+            const row = checkbox.closest('tr');
+            const leadId = row.querySelector('td:nth-child(2) a').textContent;
+            const company = row.querySelector('td:nth-child(3)').textContent;
+            const contact = row.querySelector('td:nth-child(4)').textContent;
+            
+            leadsList += `
+                <div class="col-md-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-circle me-2 text-primary"></i>
+                        <div>
+                            <div class="fw-bold">${leadId}</div>
+                            <small class="text-muted">${company} - ${contact}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        leadsList += '</div>';
+        selectedLeadsList.innerHTML = leadsList;
+    }
+
+    // Status change handler for custom fields
+    const newStatusSelect = document.getElementById('new_status');
+    const bulkCustomFieldsContainer = document.getElementById('bulkCustomFieldsContainer');
+    
+    if (newStatusSelect) {
+        newStatusSelect.addEventListener('change', function() {
+            const selectedStatus = this.value;
+            const selectedOption = this.options[this.selectedIndex];
+            const hasFields = selectedOption.dataset.hasFields === 'true';
+            
+            // Clear previous custom fields
+            bulkCustomFieldsContainer.innerHTML = '';
+            
+            // Update status information
+            updateStatusInfo(selectedStatus, hasFields);
+            
+            if (selectedStatus) {
+                // Show loading indicator
+                bulkCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
+                
+                // Fetch custom fields for the selected status
+                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatus)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        bulkCustomFieldsContainer.innerHTML = '';
+                        
+                        if (data.customFields && data.customFields.length > 0) {
+                            // Add header for custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-3"><i class="fas fa-info-circle me-2"></i>This status requires additional information for all selected leads:</div>');
+                            
+                            data.customFields.forEach(field => {
+                                const fieldHtml = createCustomFieldHtml(field);
+                                bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+                            });
+                        } else {
+                            // Show message when no custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-success mb-3"><i class="fas fa-check-circle me-2"></i>No additional fields required for this status.</div>');
+                        }
+                        
+                        // Show additional options
+                        document.getElementById('additionalOptions').style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error fetching custom fields:', error);
+                        bulkCustomFieldsContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading custom fields. Please try again.</div>';
+                    });
+            } else {
+                // Hide additional options when no status selected
+                document.getElementById('additionalOptions').style.display = 'none';
+            }
+        });
+    }
+    
+    function updateStatusInfo(statusName, hasFields) {
+        const statusInfo = document.getElementById('statusInfo');
+        
+        if (statusName) {
+            let infoHtml = `
+                <div class="mb-3">
+                    <h6 class="text-primary">${statusName}</h6>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-${hasFields ? 'exclamation-triangle' : 'check-circle'} me-2 text-${hasFields ? 'warning' : 'success'}"></i>
+                        <span class="small">${hasFields ? 'Requires additional information' : 'No additional fields required'}</span>
+                    </div>
+            `;
+            
+            if (hasFields) {
+                infoHtml += `
+                    <div class="alert alert-warning alert-sm mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>This status has custom fields that must be filled out for all selected leads.</small>
+                    </div>
+                `;
+            } else {
+                infoHtml += `
+                    <div class="alert alert-success alert-sm mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <small>This status can be applied without additional information.</small>
+                    </div>
+                `;
+            }
+            
+            infoHtml += '</div>';
+            statusInfo.innerHTML = infoHtml;
+        } else {
+            statusInfo.innerHTML = `
+                <p class="mb-2">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    Select a status to see additional information and required fields.
+                </p>
+            `;
+        }
+    }
+    
+    function createCustomFieldHtml(field) {
+        const required = field.is_required ? 'required' : '';
+        const requiredAsterisk = field.is_required ? ' <span class="text-danger">*</span>' : '';
+        
+        let inputHtml = '';
+        
+        switch (field.field_type) {
+            case 'textarea':
+                inputHtml = `<textarea class="form-control" name="custom_field_${field.field_name}" ${required}></textarea>`;
+                break;
+            case 'select':
+                const options = field.field_options ? field.field_options.split('\n') : [];
+                inputHtml = `<select class="form-select" name="custom_field_${field.field_name}" ${required}>`;
+                inputHtml += '<option value="">Select...</option>';
+                options.forEach(option => {
+                    inputHtml += `<option value="${option.trim()}">${option.trim()}</option>`;
+                });
+                inputHtml += '</select>';
+                break;
+            case 'date':
+                inputHtml = `<input type="date" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'number':
+                inputHtml = `<input type="number" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'email':
+                inputHtml = `<input type="email" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'url':
+                inputHtml = `<input type="url" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            default: // text
+                inputHtml = `<input type="text" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+        }
+        
+        return `
+            <div class="custom-field-container">
+                <label for="custom_field_${field.field_name}" class="form-label fw-bold">
+                    ${field.field_label}${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${field.is_required ? '<div class="form-text text-muted mt-2"><i class="fas fa-asterisk text-danger me-1"></i>This field is required</div>' : ''}
+            </div>
+        `;
     }
 
     // Form submission
@@ -322,6 +698,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!newStatus) {
                 e.preventDefault();
                 alert('Please select a status');
+                return;
+            }
+            
+            // Validate required custom fields
+            const requiredFields = bulkCustomFieldsContainer.querySelectorAll('[required]');
+            let missingFields = [];
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    const label = field.previousElementSibling;
+                    if (label && label.tagName === 'LABEL') {
+                        missingFields.push(label.textContent.replace('*', '').trim());
+                    }
+                }
+            });
+            
+            if (missingFields.length > 0) {
+                e.preventDefault();
+                alert('Please fill in the following required fields:\n' + missingFields.join('\n'));
                 return;
             }
             

@@ -38,6 +38,8 @@ class StatusController extends Controller {
         }
         
         $name = trim($_POST['name'] ?? '');
+        $restrictBulkUpdate = isset($_POST['restrict_bulk_update']);
+        $isDefault = isset($_POST['is_default']);
         
         if (empty($name)) {
             $this->view('status/form', [
@@ -59,7 +61,7 @@ class StatusController extends Controller {
         }
         
         try {
-            $this->statusModel->create($name);
+            $this->statusModel->create($name, $restrictBulkUpdate, $isDefault);
             $this->redirect('index.php?action=status_management&success=' . urlencode('Status created successfully'));
         } catch (Exception $e) {
             $this->view('status/form', [
@@ -83,8 +85,12 @@ class StatusController extends Controller {
             $this->redirect('index.php?action=status_management');
         }
         
+        // Get custom fields for this status
+        $customFields = $this->statusModel->getCustomFields($id);
+        
         $this->view('status/form', [
             'status' => $status,
+            'customFields' => $customFields,
             'action' => 'edit'
         ]);
     }
@@ -103,10 +109,13 @@ class StatusController extends Controller {
         }
         
         $name = trim($_POST['name'] ?? '');
+        $restrictBulkUpdate = isset($_POST['restrict_bulk_update']);
+        $isDefault = isset($_POST['is_default']);
         
         if (empty($name)) {
             $this->view('status/form', [
                 'status' => $status,
+                'customFields' => $this->statusModel->getCustomFields($id),
                 'action' => 'edit',
                 'error' => 'Status name is required'
             ]);
@@ -117,6 +126,7 @@ class StatusController extends Controller {
         if ($this->statusModel->nameExists($name, $id)) {
             $this->view('status/form', [
                 'status' => $status,
+                'customFields' => $this->statusModel->getCustomFields($id),
                 'action' => 'edit',
                 'error' => 'Status name already exists'
             ]);
@@ -124,11 +134,12 @@ class StatusController extends Controller {
         }
         
         try {
-            $this->statusModel->update($id, $name);
+            $this->statusModel->update($id, $name, $restrictBulkUpdate, $isDefault);
             $this->redirect('index.php?action=status_management&success=' . urlencode('Status updated successfully'));
         } catch (Exception $e) {
             $this->view('status/form', [
                 'status' => $status,
+                'customFields' => $this->statusModel->getCustomFields($id),
                 'action' => 'edit',
                 'error' => 'Failed to update status: ' . $e->getMessage()
             ]);
@@ -161,6 +172,115 @@ class StatusController extends Controller {
         $statuses = $this->statusModel->all();
         header('Content-Type: application/json');
         echo json_encode($statuses);
+        exit;
+    }
+    
+    // Create custom field
+    public function createCustomField() {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $statusId = (int)($_POST['status_id'] ?? 0);
+        $fieldName = trim($_POST['field_name'] ?? '');
+        $fieldLabel = trim($_POST['field_label'] ?? '');
+        $fieldType = trim($_POST['field_type'] ?? 'text');
+        $fieldOptions = trim($_POST['field_options'] ?? '');
+        $isRequired = isset($_POST['is_required']);
+        $fieldOrder = (int)($_POST['field_order'] ?? 0);
+        
+        if (empty($statusId) || empty($fieldName) || empty($fieldLabel)) {
+            $this->redirect("index.php?action=status_edit&id={$statusId}&error=" . urlencode('Field name and label are required'));
+        }
+        
+        try {
+            $this->statusModel->createCustomField($statusId, $fieldName, $fieldLabel, $fieldType, $fieldOptions, $isRequired, $fieldOrder);
+            $this->redirect("index.php?action=status_edit&id={$statusId}&success=" . urlencode('Custom field created successfully'));
+        } catch (Exception $e) {
+            $this->redirect("index.php?action=status_edit&id={$statusId}&error=" . urlencode('Failed to create custom field: ' . $e->getMessage()));
+        }
+    }
+    
+    // Update custom field
+    public function updateCustomField($fieldId) {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$fieldId) {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $field = $this->statusModel->getCustomFieldById($fieldId);
+        if (!$field) {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $fieldName = trim($_POST['field_name'] ?? '');
+        $fieldLabel = trim($_POST['field_label'] ?? '');
+        $fieldType = trim($_POST['field_type'] ?? 'text');
+        $fieldOptions = trim($_POST['field_options'] ?? '');
+        $isRequired = isset($_POST['is_required']);
+        $fieldOrder = (int)($_POST['field_order'] ?? 0);
+        
+        if (empty($fieldName) || empty($fieldLabel)) {
+            $this->redirect("index.php?action=status_edit&id={$field['status_id']}&error=" . urlencode('Field name and label are required'));
+        }
+        
+        try {
+            $this->statusModel->updateCustomField($fieldId, $fieldName, $fieldLabel, $fieldType, $fieldOptions, $isRequired, $fieldOrder);
+            $this->redirect("index.php?action=status_edit&id={$field['status_id']}&success=" . urlencode('Custom field updated successfully'));
+        } catch (Exception $e) {
+            $this->redirect("index.php?action=status_edit&id={$field['status_id']}&error=" . urlencode('Failed to update custom field: ' . $e->getMessage()));
+        }
+    }
+    
+    // Delete custom field
+    public function deleteCustomField($fieldId) {
+        require_role(['admin']);
+        
+        if (!$fieldId) {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $field = $this->statusModel->getCustomFieldById($fieldId);
+        if (!$field) {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        try {
+            $this->statusModel->deleteCustomField($fieldId);
+            $this->redirect("index.php?action=status_edit&id={$field['status_id']}&success=" . urlencode('Custom field deleted successfully'));
+        } catch (Exception $e) {
+            $this->redirect("index.php?action=status_edit&id={$field['status_id']}&error=" . urlencode('Failed to delete custom field: ' . $e->getMessage()));
+        }
+    }
+    
+    // Set status as default (AJAX endpoint)
+    public function setAsDefault($id) {
+        require_role(['admin']);
+        
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Status ID required']);
+            exit;
+        }
+        
+        $status = $this->statusModel->getById($id);
+        if (!$status) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Status not found']);
+            exit;
+        }
+        
+        try {
+            $this->statusModel->setAsDefault($id);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Status set as default successfully']);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to set status as default: ' . $e->getMessage()]);
+        }
         exit;
     }
 }

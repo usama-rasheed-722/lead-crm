@@ -349,15 +349,22 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads');
         }
         
-        // Check permissions
+        // Check permissions (SDR can only act on their own leads)
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        $currentSdrId = $user['sdr_id'] ?? $user['id'];
+        if ($user['role'] === 'sdr' && (string)$lead['sdr_id'] !== (string)$currentSdrId) {
             http_response_code(403);
             echo 'Access denied';
             exit;
         }
         
         $duplicates = $this->leadModel->findDuplicates($id);
+        // For SDRs, only show duplicates that belong to them
+        if ($user['role'] === 'sdr') {
+            $duplicates = array_values(array_filter($duplicates, function($dup) use ($currentSdrId) {
+                return (string)($dup['sdr_id'] ?? '') === (string)$currentSdrId;
+            }));
+        }
         
         $this->view('leads/duplicates', [
             'lead' => $lead,
@@ -376,9 +383,10 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads');
         }
         
-        // Check permissions
+        // Check permissions (SDR can only act on their own leads)
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        $currentSdrId = $user['sdr_id'] ?? $user['id'];
+        if ($user['role'] === 'sdr' && (string)$lead['sdr_id'] !== (string)$currentSdrId) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -390,7 +398,18 @@ class LeadController extends Controller {
         }
         
         try {
-            $this->leadModel->mergeDuplicates($id, $duplicateIds);
+            // If SDR, ensure selected duplicates also belong to the same SDR
+            if ($user['role'] === 'sdr') {
+                foreach ($duplicateIds as $dupId) {
+                    $dupLead = $this->leadModel->getById($dupId);
+                    if (!$dupLead || (string)$dupLead['sdr_id'] !== (string)$currentSdrId) {
+                        $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('You can only merge duplicates that belong to you'));
+                    }
+                }
+            }
+
+            // Pass SDR id so the primary lead retains/gets assigned to the merging SDR
+            $this->leadModel->mergeDuplicates($id, $duplicateIds, $currentSdrId);
             $this->redirect("index.php?action=lead_view&id={$id}&success=" . urlencode('Successfully merged ' . count($duplicateIds) . ' duplicate lead(s)'));
         } catch (Exception $e) {
             $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('Failed to merge duplicates: ' . $e->getMessage()));
@@ -459,6 +478,12 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
         }
         
+        // Check if the target status restricts bulk updates
+        $statusModel = new StatusModel();
+        if ($statusModel->restrictsBulkUpdateByName($newStatus)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Bulk status update is not allowed for the selected status. Please update leads individually.'));
+        }
+        
         // Check permissions for each lead
         if ($user['role'] === 'sdr') {
             $userSdrId = $user['sdr_id'] ?? $user['id'];
@@ -476,6 +501,182 @@ class LeadController extends Controller {
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
         }
+    }
+
+    // Update status with custom fields
+    public function updateStatusWithCustomFields() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $user = auth_user();
+        $leadId = (int)($_POST['lead_id'] ?? 0);
+        $newStatus = trim($_POST['new_status'] ?? '');
+        
+        if (empty($leadId) || empty($newStatus)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead ID or status not specified'));
+        }
+        
+        // Check permissions
+        $lead = $this->leadModel->getById($leadId);
+        if (!$lead) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
+        }
+        
+        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
+        }
+        
+        // Get custom fields for the new status
+        $statusModel = new StatusModel();
+        $customFields = $statusModel->getCustomFieldsByName($newStatus);
+        
+        // Collect custom fields data
+        $customFieldsData = [];
+        foreach ($customFields as $field) {
+            $fieldName = $field['field_name'];
+            $fieldValue = $_POST['custom_field_' . $fieldName] ?? '';
+            
+            // Validate required fields
+            if ($field['is_required'] && empty($fieldValue)) {
+                $this->redirect("index.php?action=lead_view&id={$leadId}&error=" . urlencode("Field '{$field['field_label']}' is required"));
+            }
+            
+            $customFieldsData[$fieldName] = $fieldValue;
+        }
+        
+        try {
+            $this->leadModel->updateStatusWithCustomFields($leadId, $newStatus, $user['id'], $customFieldsData);
+            $this->redirect("index.php?action=lead_view&id={$leadId}&success=" . urlencode('Status updated successfully'));
+        } catch (Exception $e) {
+            $this->redirect("index.php?action=lead_view&id={$leadId}&error=" . urlencode('Failed to update status: ' . $e->getMessage()));
+        }
+    }
+
+    // Get custom fields for a status (AJAX endpoint)
+    public function getCustomFieldsForStatus() {
+        $statusName = $_GET['status'] ?? '';
+        
+        if (empty($statusName)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Status name required']);
+            exit;
+        }
+        
+        $statusModel = new StatusModel();
+        $customFields = $statusModel->getCustomFieldsByName($statusName);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['customFields' => $customFields]);
+        exit;
+    }
+
+    // Bulk update status with custom fields
+    public function bulkUpdateStatusWithCustomFields() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=leads');
+        }
+        
+        $user = auth_user();
+        $leadIds = $_POST['lead_ids'] ?? '';
+        $newStatus = trim($_POST['new_status'] ?? '');
+        
+        if (empty($leadIds) || empty($newStatus)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected or status not specified'));
+        }
+        
+        $ids = array_filter(array_map('intval', explode(',', $leadIds)));
+        if (empty($ids)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+        }
+        
+        // Check if the target status restricts bulk updates
+        $statusModel = new StatusModel();
+        if ($statusModel->restrictsBulkUpdateByName($newStatus)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Bulk status update is not allowed for the selected status. Please update leads individually.'));
+        }
+        
+        // Check permissions for each lead
+        if ($user['role'] === 'sdr') {
+            $userSdrId = $user['sdr_id'] ?? $user['id'];
+            foreach ($ids as $leadId) {
+                $lead = $this->leadModel->getById($leadId);
+                if (!$lead || $lead['sdr_id'] != $userSdrId) {
+                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads'));
+                }
+            }
+        }
+        
+        // Get custom fields for the new status
+        $customFields = $statusModel->getCustomFieldsByName($newStatus);
+        
+        // Collect custom fields data
+        $customFieldsData = [];
+        foreach ($customFields as $field) {
+            $fieldName = $field['field_name'];
+            $fieldValue = $_POST['custom_field_' . $fieldName] ?? '';
+            
+            // Validate required fields
+            if ($field['is_required'] && empty($fieldValue)) {
+                $this->redirect('index.php?action=leads&error=' . urlencode("Field '{$field['field_label']}' is required"));
+            }
+            
+            $customFieldsData[$fieldName] = $fieldValue;
+        }
+        
+        try {
+            // Update each lead individually with custom fields data
+            $this->pdo->beginTransaction();
+            
+            foreach ($ids as $leadId) {
+                $this->leadModel->updateStatusWithCustomFields($leadId, $newStatus, $user['id'], $customFieldsData);
+            }
+            
+            $this->pdo->commit();
+            $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
+        }
+    }
+
+    // View full page status history for a lead
+    public function statusHistory() {
+        $leadId = $_GET['id'] ?? null;
+        
+        if (!$leadId) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Lead ID required'));
+        }
+        
+        $user = auth_user();
+        
+        // Check permissions
+        if ($user['role'] === 'sdr') {
+            $userSdrId = $user['sdr_id'] ?? $user['id'];
+            $lead = $this->leadModel->getById($leadId);
+            if (!$lead || $lead['sdr_id'] != $userSdrId) {
+                $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
+            }
+        }
+        
+        // Get lead details
+        $lead = $this->leadModel->getById($leadId);
+        if (!$lead) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
+        }
+        
+        // Get status history
+        $statusHistory = $this->leadModel->getStatusHistory($leadId);
+        
+        // Get all statuses for reference
+        $statusModel = new StatusModel();
+        $statuses = $statusModel->all();
+        
+        $this->view('leads/status_history', [
+            'lead' => $lead,
+            'statusHistory' => $statusHistory,
+            'statuses' => $statuses
+        ]);
     }
 }
 ?>

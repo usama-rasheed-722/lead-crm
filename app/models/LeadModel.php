@@ -8,9 +8,10 @@ class LeadModel extends BaseModel {
         }
         $status = $this->detectDuplicateStatus($data);
         
-        // Set default status to "New Lead" if not provided
+        // Set default status if not provided
         if (empty($data['status'])) {
-            $data['status'] = 'New Lead';
+            $statusModel = new StatusModel();
+            $data['status'] = $statusModel->getDefaultStatusName();
         }
 
         $stmt = $this->pdo->prepare("
@@ -49,9 +50,12 @@ class LeadModel extends BaseModel {
 
         $leadId = $this->pdo->lastInsertId();
         
-        // Log initial status if it's not "New Lead"
-        if ($data['status'] !== 'New Lead') {
-            $this->logStatusChange($leadId, null, $data['status'], $data['created_by']);
+        // Log initial status if it's not the default status
+        $statusModel = new StatusModel();
+        $defaultStatusName = $statusModel->getDefaultStatusName();
+        if ($data['status'] !== $defaultStatusName) {
+            $customFieldsData = $data['custom_fields_data'] ?? null;
+            $this->logStatusChange($leadId, null, $data['status'], $data['created_by'], $customFieldsData);
         }
 
         return $leadId;
@@ -101,7 +105,8 @@ class LeadModel extends BaseModel {
         // Log status change if status was updated
         if ($result && $oldStatus !== $newStatus && !empty($newStatus)) {
             $changedBy = $data['changed_by'] ?? $currentLead['created_by'];
-            $this->logStatusChange($id, $oldStatus, $newStatus, $changedBy);
+            $customFieldsData = $data['custom_fields_data'] ?? null;
+            $this->logStatusChange($id, $oldStatus, $newStatus, $changedBy, $customFieldsData);
         }
         
         return $result;
@@ -250,7 +255,9 @@ class LeadModel extends BaseModel {
     }
 
     // Bulk insert (CSV import)
-    public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id){
+    public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id, $statuses){
+        
+        
         $this->pdo->beginTransaction();
         $leadIds = [];
         try{
@@ -258,6 +265,7 @@ class LeadModel extends BaseModel {
                 $sdr_id = $r['sdr_id'] ?? $current_user_sdr_id;
                 $r['sdr_id'] =  $current_user_sdr_id;
                 $r['lead_id'] = $this->generateLeadId($sdr_id);
+                $r['status'] = getIdByName($statuses, $r['status']);
                 $r['created_by'] = $created_by_user_id;
                 $id = $this->create($r);
                 $leadIds[] = $id;
@@ -392,7 +400,7 @@ class LeadModel extends BaseModel {
     }
     
     // Merge duplicate leads
-    public function mergeDuplicates($primaryId, $duplicateIds) {
+    public function mergeDuplicates($primaryId, $duplicateIds, $assignSdrId = null) {
         $this->pdo->beginTransaction();
         try {
             // Get primary lead data
@@ -451,6 +459,16 @@ class LeadModel extends BaseModel {
                 }
             }
             
+            // Ensure SDR assignment: if provided, assign to merging SDR; else keep existing
+            if ($assignSdrId !== null && $assignSdrId !== '') {
+                $mergedData['sdr_id'] = $assignSdrId;
+            } elseif (empty($primaryLead['sdr_id'])) {
+                // If primary has no SDR and no assign provided, default to created_by if it looks like an SDR id
+                if (!empty($primaryLead['created_by'])) {
+                    $mergedData['sdr_id'] = $primaryLead['created_by'];
+                }
+            }
+
             // Update primary lead with merged data
             $this->update($primaryId, $mergedData);
             
@@ -562,13 +580,48 @@ class LeadModel extends BaseModel {
         }
     }
 
+    // Update status for a single lead with custom fields
+    public function updateStatusWithCustomFields($leadId, $newStatus, $changedBy, $customFieldsData = null) {
+        if (empty($leadId) || empty($newStatus)) {
+            return false;
+        }
+        
+        $this->pdo->beginTransaction();
+        try {
+            // Get current lead data
+            $currentLead = $this->getById($leadId);
+            if (!$currentLead) {
+                throw new Exception('Lead not found');
+            }
+            
+            $oldStatus = $currentLead['status'];
+            
+            // Update status
+            $stmt = $this->pdo->prepare("UPDATE leads SET status = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$newStatus, $leadId]);
+            
+            // Log status change with custom fields data
+            if ($oldStatus !== $newStatus) {
+                $this->logStatusChange($leadId, $oldStatus, $newStatus, $changedBy, $customFieldsData);
+            }
+            
+            $this->pdo->commit();
+            return true;
+            
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     // Log status change
-    private function logStatusChange($leadId, $oldStatus, $newStatus, $changedBy) {
+    private function logStatusChange($leadId, $oldStatus, $newStatus, $changedBy, $customFieldsData = null) {
         $stmt = $this->pdo->prepare('
-            INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by) 
-            VALUES (?, ?, ?, ?)
+            INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by, custom_fields_data) 
+            VALUES (?, ?, ?, ?, ?)
         ');
-        return $stmt->execute([$leadId, $oldStatus, $newStatus, $changedBy]);
+        $customFieldsJson = $customFieldsData ? json_encode($customFieldsData) : null;
+        return $stmt->execute([$leadId, $oldStatus, $newStatus, $changedBy, $customFieldsJson]);
     }
 
     // Get leads with specific columns for the new leads page
@@ -647,5 +700,21 @@ class LeadModel extends BaseModel {
         }
         
         return $fields;
+    }
+
+    // Get status history for a lead
+    public function getStatusHistory($leadId) {
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                h.*,
+                u.full_name,
+                u.username
+            FROM contact_status_history h
+            LEFT JOIN users u ON h.changed_by = u.id
+            WHERE h.lead_id = ?
+            ORDER BY h.changed_at DESC
+        ");
+        $stmt->execute([$leadId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

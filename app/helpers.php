@@ -98,3 +98,19 @@ function generateSDRNumber($leadId, $sdrId) {
     
     return $sdrNumber;
 }
+
+
+function getIdByName(array $data, string $name): ?int
+{ 
+    if (!isset($data[0]) || !is_array($data[0])) {
+        return null;
+    }
+ 
+    foreach ($data[0] as $item) {
+        if (isset($item['name']) && strtolower($item['name']) === strtolower($name)) {
+            return $item['name'] ?? null;
+        }
+    }
+ 
+    throw new Exception("Status not found: " . $name);
+}
