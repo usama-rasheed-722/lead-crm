@@ -782,6 +782,87 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         }
     }
 
+    // Bulk update status with custom fields (single transaction, single query approach)
+    public function bulkUpdateStatusWithCustomFields($leadIds, $newStatusId, $changedBy, $customFieldsData = []) {
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Get status names for logging
+            $statusModel = new StatusModel();
+            $newStatus = $statusModel->getById($newStatusId);
+            if (!$newStatus) {
+                throw new Exception('Invalid status ID');
+            }
+            $newStatusName = $newStatus['name'];
+            $customFieldsJson = !empty($customFieldsData) ? json_encode($customFieldsData) : null;
+            
+            // Get current status for each lead
+            $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
+            $stmt = $this->pdo->prepare("SELECT id, status_id FROM leads WHERE id IN ($placeholders)");
+            $stmt->execute($leadIds);
+            $currentLeads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Prepare status history data for bulk insert
+            $statusHistoryData = [];
+            $updateLeadIds = [];
+            
+            foreach ($currentLeads as $lead) {
+                $oldStatusId = $lead['status_id'];
+                $oldStatusName = $oldStatusId ? $statusModel->getById($oldStatusId)['name'] ?? null : null;
+                
+                // Only update if status is different
+                if ($oldStatusId != $newStatusId) {
+                    $updateLeadIds[] = $lead['id'];
+                    $statusHistoryData[] = [
+                        'lead_id' => $lead['id'],
+                        'old_status' => $oldStatusName,
+                        'new_status' => $newStatusName,
+                        'changed_by' => $changedBy,
+                        'custom_fields_data' => $customFieldsJson
+                    ];
+                }
+            }
+            
+            if (empty($updateLeadIds)) {
+                $this->pdo->commit();
+                return true; // No changes needed
+            }
+            
+            // Bulk update leads status
+            $updatePlaceholders = str_repeat('?,', count($updateLeadIds) - 1) . '?';
+            $updateStmt = $this->pdo->prepare("UPDATE leads SET status_id = ?, updated_at = NOW() WHERE id IN ($updatePlaceholders)");
+            $updateParams = array_merge([$newStatusId], $updateLeadIds);
+            $updateStmt->execute($updateParams);
+            
+            // Bulk insert status history (single query)
+            if (!empty($statusHistoryData)) {
+                $historyPlaceholders = [];
+                $historyParams = [];
+                
+                foreach ($statusHistoryData as $data) {
+                    $uniqueId = uniqid(); // Generate unique placeholder IDs
+                    $historyPlaceholders[] = "(:lead_id_$uniqueId, :old_status_$uniqueId, :new_status_$uniqueId, :changed_by_$uniqueId, :custom_fields_data_$uniqueId)";
+                    $historyParams[":lead_id_$uniqueId"] = $data['lead_id'];
+                    $historyParams[":old_status_$uniqueId"] = $data['old_status'];
+                    $historyParams[":new_status_$uniqueId"] = $data['new_status'];
+                    $historyParams[":changed_by_$uniqueId"] = $data['changed_by'];
+                    $historyParams[":custom_fields_data_$uniqueId"] = $data['custom_fields_data'];
+                }
+                
+                $historySql = "INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by, custom_fields_data) VALUES " . implode(', ', $historyPlaceholders);
+                $historyStmt = $this->pdo->prepare($historySql);
+                $historyStmt->execute($historyParams);
+            }
+            
+            $this->pdo->commit();
+            return true;
+            
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     // Log status change
     private function logStatusChange($leadId, $oldStatus, $newStatus, $changedBy, $customFieldsData = null) {
         $stmt = $this->pdo->prepare('

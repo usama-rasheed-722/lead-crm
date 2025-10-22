@@ -362,12 +362,25 @@
                         <select class="form-select" id="new_status_id" name="new_status_id" required>
                             <option value="">Select Status</option>
                             <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
-                                <option value="<?= $st['id'] ?>">
-                                    <?= htmlspecialchars($st['name']) ?>
+                                <?php
+                                $statusModel = new StatusModel();
+                                $customFields = $statusModel->getCustomFieldsByName($st['name']);
+                                $hasFields = count($customFields) > 0;
+                                ?>
+                                <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                    <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
                                 </option>
                             <?php endforeach; endif; ?>
                         </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <span class="text-muted">📝 indicates statuses that require additional information</span>
+                        </div>
                     </div>
+                    
+                    <!-- Dynamic Custom Fields Container -->
+                    <div id="bulkCustomFieldsContainer"></div>
+                    
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         This will update the status for <span id="selectedCount">0</span> selected lead(s).
@@ -387,6 +400,35 @@
 <form id="bulkDeleteForm" method="POST" action="index.php?action=bulk_delete" style="display: none;">
     <input type="hidden" name="lead_ids" id="bulkDeleteIds">
 </form>
+
+<style>
+.custom-field-container {
+    border-left: 3px solid #0d6efd;
+    padding-left: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    border-radius: 0 5px 5px 0;
+    padding: 15px;
+}
+
+.custom-field-container .form-label {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.custom-field-container .form-control,
+.custom-field-container .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.custom-field-container .form-control:focus,
+.custom-field-container .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -514,11 +556,54 @@ document.addEventListener('DOMContentLoaded', function() {
             bulkUpdateModal.show();
         });
     }
+    // Handle bulk update status change with custom fields
+    const bulkStatusSelect = document.getElementById('new_status_id');
+    const bulkCustomFieldsContainer = document.getElementById('bulkCustomFieldsContainer');
+    
+    if (bulkStatusSelect && bulkCustomFieldsContainer) {
+        bulkStatusSelect.addEventListener('change', function() {
+            const selectedStatusId = this.value;
+            const selectedStatusName = this.selectedOptions[0]?.text?.replace(' 📝', '') || '';
+            
+            // Clear previous custom fields
+            bulkCustomFieldsContainer.innerHTML = '';
+            
+            if (selectedStatusId) {
+                // Show loading indicator
+                bulkCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
+                
+                // Fetch custom fields for the selected status
+                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        bulkCustomFieldsContainer.innerHTML = '';
+                        
+                        if (data.customFields && data.customFields.length > 0) {
+                            // Add header for custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-3"><i class="fas fa-info-circle me-2"></i>This status requires additional information for all selected leads:</div>');
+                            
+                            data.customFields.forEach(field => {
+                                const fieldHtml = createCustomFieldHtml(field);
+                                bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+                            });
+                        } else {
+                            // Show message when no custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-success mb-3"><i class="fas fa-check-circle me-2"></i>No additional fields required for this status.</div>');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching custom fields:', error);
+                        bulkCustomFieldsContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading custom fields. Please try again.</div>';
+                    });
+            }
+        });
+    }
+    
     const bulkUpdateForm = document.getElementById('bulkUpdateForm');
     if (bulkUpdateForm) {
         bulkUpdateForm.addEventListener('submit', function(e) {
             const newStatusId = document.getElementById('new_status_id').value;
-            const newStatusName = document.getElementById('new_status_id').selectedOptions[0]?.text || '';
+            const newStatusName = document.getElementById('new_status_id').selectedOptions[0]?.text?.replace(' 📝', '') || '';
             const count = selectedSet.size;
             if (!newStatusId || count === 0) {
                 e.preventDefault();
@@ -617,6 +702,53 @@ document.addEventListener('DOMContentLoaded', function() {
     // Apply saved columns on load
     const savedCols = getColumnsSelection();
     if (savedCols) applyColumns(savedCols);
+    
+    // Function to create custom field HTML (shared with lead view)
+    function createCustomFieldHtml(field) {
+        const required = field.is_required ? 'required' : '';
+        const requiredAsterisk = field.is_required ? ' <span class="text-danger">*</span>' : '';
+        
+        let inputHtml = '';
+        
+        switch (field.field_type) {
+            case 'textarea':
+                inputHtml = `<textarea class="form-control" name="custom_field_${field.field_name}" ${required}></textarea>`;
+                break;
+            case 'select':
+                const options = field.field_options ? field.field_options.split('\n') : [];
+                inputHtml = `<select class="form-select" name="custom_field_${field.field_name}" ${required}>`;
+                inputHtml += '<option value="">Select...</option>';
+                options.forEach(option => {
+                    inputHtml += `<option value="${option.trim()}">${option.trim()}</option>`;
+                });
+                inputHtml += '</select>';
+                break;
+            case 'date':
+                inputHtml = `<input type="date" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'number':
+                inputHtml = `<input type="number" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'email':
+                inputHtml = `<input type="email" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'url':
+                inputHtml = `<input type="url" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            default: // text
+                inputHtml = `<input type="text" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+        }
+        
+        return `
+            <div class="custom-field-container">
+                <label for="custom_field_${field.field_name}" class="form-label fw-bold">
+                    ${field.field_label}${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${field.is_required ? '<div class="form-text text-muted mt-2"><i class="fas fa-asterisk text-danger me-1"></i>This field is required</div>' : ''}
+            </div>
+        `;
+    }
 });
 </script>
 

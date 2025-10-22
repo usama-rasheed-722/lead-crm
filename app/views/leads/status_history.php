@@ -8,6 +8,9 @@
         <a href="index.php?action=lead_view&id=<?= $lead['id'] ?>" class="btn btn-outline-primary me-2">
             <i class="fas fa-eye me-2"></i>View Lead
         </a>
+        <a href="index.php?action=lead_add" class="btn btn-outline-primary me-2">
+            <i class="fas fa-plus me-2"></i>Add new Lead
+        </a>
         <a href="index.php?action=leads" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Leads
         </a>

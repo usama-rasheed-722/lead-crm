@@ -508,9 +508,15 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
         }
         
-        // Check if the target status restricts bulk updates
+        // Get the status name for checking restrictions
         $statusModel = new StatusModel();
-        if ($statusModel->restrictsBulkUpdateByName($newStatus)) {
+        $newStatus = $statusModel->getById($newStatusId);
+        if (!$newStatus) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid status selected'));
+        }
+        
+        // Check if the target status restricts bulk updates
+        if ($statusModel->restrictsBulkUpdateByName($newStatus['name'])) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Bulk status update is not allowed for the selected status. Please update leads individually.'));
         }
         
@@ -525,8 +531,26 @@ class LeadController extends Controller {
             }
         }
         
+        // Get custom fields for the new status
+        $customFields = $statusModel->getCustomFieldsByName($newStatus['name']);
+        
+        // Collect custom fields data
+        $customFieldsData = [];
+        foreach ($customFields as $field) {
+            $fieldName = $field['field_name'];
+            $fieldValue = $_POST['custom_field_' . $fieldName] ?? '';
+            
+            // Validate required fields
+            if ($field['is_required'] && empty($fieldValue)) {
+                $this->redirect('index.php?action=leads&error=' . urlencode("Field '{$field['field_label']}' is required"));
+            }
+            
+            $customFieldsData[$fieldName] = $fieldValue;
+        }
+        
         try {
-            $this->leadModel->bulkUpdateStatus($ids, $newStatusId, $user['id']);
+            // Use the new bulk update method with single transaction and single query
+            $this->leadModel->bulkUpdateStatusWithCustomFields($ids, $newStatusId, $user['id'], $customFieldsData);
             $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
