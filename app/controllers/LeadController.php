@@ -19,8 +19,8 @@ class LeadController extends Controller {
             'duplicate_status' => $_GET['duplicate_status'] ?? '',
             'date_from' => $_GET['date_from'] ?? '',
             'date_to' => $_GET['date_to'] ?? '',
-            'lead_source' => $_GET['lead_source'] ?? '',
-            'status' => $_GET['status'] ?? '',
+            'lead_source_id' => $_GET['lead_source_id'] ?? '',
+            'status_id' => $_GET['status_id'] ?? '',
             'field_type' => $_GET['field_type'] ?? '',
             'field_value' => $_GET['field_value'] ?? ''
         ];
@@ -38,6 +38,7 @@ class LeadController extends Controller {
         }
         
         $leads = $this->leadModel->search($search, $filters, $limit, $offset);
+        // pr( $leads ,1);
         $total = $this->leadModel->countSearch($search, $filters);
         $totalPages = max(1, (int)ceil($total / $limit));
         $users = $this->userModel->all();
@@ -46,6 +47,10 @@ class LeadController extends Controller {
         $statusModel = new StatusModel();
         $statuses = $statusModel->all();
         
+        // Load lead sources for filters
+        $leadSourceModel = new LeadSourceModel();
+        $leadSources = $leadSourceModel->getActive();
+        
         // Get available fields from leads table
         $availableFields = $this->leadModel->getAvailableFields();
         
@@ -53,6 +58,7 @@ class LeadController extends Controller {
             'leads' => $leads,
             'users' => $users,
             'statuses' => $statuses,
+            'leadSources' => $leadSources,
             'availableFields' => $availableFields,
             'search' => $search,
             'filters' => $filters,
@@ -100,9 +106,15 @@ class LeadController extends Controller {
     // Show create form
     public function create() {
         $users = $this->userModel->all();
+        $leadSourceModel = new LeadSourceModel();
+        $leadSources = $leadSourceModel->getActive();
+        $statusModel = new StatusModel();
+        $statuses = $statusModel->all();
         $this->view('leads/form', [
             'lead' => null,
             'users' => $users,
+            'leadSources' => $leadSources,
+            'statuses' => $statuses,
             'action' => 'create'
         ]);
     }
@@ -125,7 +137,7 @@ class LeadController extends Controller {
             'clutch' => trim($_POST['clutch'] ?? ''),
             'job_title' => trim($_POST['job_title'] ?? ''),
             'industry' => trim($_POST['industry'] ?? ''),
-            'lead_source' => trim($_POST['lead_source'] ?? ''),
+            'lead_source_id' => (int)($_POST['lead_source_id'] ?? 0),
             'tier' => trim($_POST['tier'] ?? ''),
             'lead_status' => trim($_POST['lead_status'] ?? ''),
             'insta' => trim($_POST['insta'] ?? ''),
@@ -135,7 +147,7 @@ class LeadController extends Controller {
             'whatsapp' => trim($_POST['whatsapp'] ?? ''),
             'next_step' => trim($_POST['next_step'] ?? ''),
             'other' => trim($_POST['other'] ?? ''),
-            'status' => trim($_POST['status'] ?? ''),
+            'status_id' => (int)($_POST['status_id'] ?? 0),
             'country' => trim($_POST['country'] ?? ''),
             'sdr_id' => $user['role'] === 'admin'
                 ? (empty($_POST['sdr_id']) ? (int)($user['sdr_id'] ?? $user['id']) : (int)$_POST['sdr_id'])
@@ -150,9 +162,15 @@ class LeadController extends Controller {
         } catch (Exception $e) {
             $error = 'Failed to create lead: ' . $e->getMessage();
             $users = $this->userModel->all();
+            $leadSourceModel = new LeadSourceModel();
+            $leadSources = $leadSourceModel->getActive();
+            $statusModel = new StatusModel();
+            $statuses = $statusModel->all();
             $this->view('leads/form', [
                 'lead' => $data,
                 'users' => $users,
+                'leadSources' => $leadSources,
+                'statuses' => $statuses,
                 'action' => 'create',
                 'error' => $error
             ]);
@@ -179,9 +197,15 @@ class LeadController extends Controller {
         }
         
         $users = $this->userModel->all();
+        $leadSourceModel = new LeadSourceModel();
+        $leadSources = $leadSourceModel->getActive();
+        $statusModel = new StatusModel();
+        $statuses = $statusModel->all();
         $this->view('leads/form', [
             'lead' => $lead,
             'users' => $users,
+            'leadSources' => $leadSources,
+            'statuses' => $statuses,
             'action' => 'edit'
         ]);
     }
@@ -215,7 +239,7 @@ class LeadController extends Controller {
             'clutch' => trim($_POST['clutch'] ?? ''),
             'job_title' => trim($_POST['job_title'] ?? ''),
             'industry' => trim($_POST['industry'] ?? ''),
-            'lead_source' => trim($_POST['lead_source'] ?? ''),
+            'lead_source_id' => (int)($_POST['lead_source_id'] ?? 0),
             'tier' => trim($_POST['tier'] ?? ''),
             'lead_status' => trim($_POST['lead_status'] ?? ''),
             'insta' => trim($_POST['insta'] ?? ''),
@@ -225,7 +249,7 @@ class LeadController extends Controller {
             'whatsapp' => trim($_POST['whatsapp'] ?? ''),
             'next_step' => trim($_POST['next_step'] ?? ''),
             'other' => trim($_POST['other'] ?? ''),
-            'status' => trim($_POST['status'] ?? ''),
+            'status_id' => (int)($_POST['status_id'] ?? 0),
             'country' => trim($_POST['country'] ?? ''),
             'sdr_id' => $user['role'] === 'admin' ? (int)($_POST['sdr_id'] ?? $lead['sdr_id']) : $lead['sdr_id'],
             'notes' => trim($_POST['notes'] ?? '')
@@ -237,9 +261,15 @@ class LeadController extends Controller {
         } catch (Exception $e) {
             $error = 'Failed to update lead: ' . $e->getMessage();
             $users = $this->userModel->all();
+            $leadSourceModel = new LeadSourceModel();
+            $leadSources = $leadSourceModel->getActive();
+            $statusModel = new StatusModel();
+            $statuses = $statusModel->all();
             $this->view('leads/form', [
                 'lead' => array_merge($lead, $data),
                 'users' => $users,
+                'leadSources' => $leadSources,
+                'statuses' => $statuses,
                 'action' => 'edit',
                 'error' => $error
             ]);
@@ -421,7 +451,7 @@ class LeadController extends Controller {
         $user = auth_user();
         $filters = [
             'sdr_id' => $_GET['sdr_id'] ?? '',
-            'status' => $_GET['status'] ?? ''
+            'status_id' => $_GET['status_id'] ?? ''
         ];
         
         // Remove empty filters
@@ -467,9 +497,9 @@ class LeadController extends Controller {
         
         $user = auth_user();
         $leadIds = $_POST['lead_ids'] ?? '';
-        $newStatus = trim($_POST['new_status'] ?? '');
+        $newStatusId = (int)($_POST['new_status_id'] ?? 0);
         
-        if (empty($leadIds) || empty($newStatus)) {
+        if (empty($leadIds) || empty($newStatusId)) {
             $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected or status not specified'));
         }
         
@@ -496,7 +526,7 @@ class LeadController extends Controller {
         }
         
         try {
-            $this->leadModel->bulkUpdateStatus($ids, $newStatus, $user['id']);
+            $this->leadModel->bulkUpdateStatus($ids, $newStatusId, $user['id']);
             $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
@@ -511,9 +541,9 @@ class LeadController extends Controller {
         
         $user = auth_user();
         $leadId = (int)($_POST['lead_id'] ?? 0);
-        $newStatus = trim($_POST['new_status'] ?? '');
+        $newStatusId = (int)($_POST['new_status_id'] ?? 0);
         
-        if (empty($leadId) || empty($newStatus)) {
+        if (empty($leadId) || empty($newStatusId)) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead ID or status not specified'));
         }
         
@@ -546,7 +576,7 @@ class LeadController extends Controller {
         }
         
         try {
-            $this->leadModel->updateStatusWithCustomFields($leadId, $newStatus, $user['id'], $customFieldsData);
+            $this->leadModel->updateStatusWithCustomFields($leadId, $newStatusId, $user['id'], $customFieldsData);
             $this->redirect("index.php?action=lead_view&id={$leadId}&success=" . urlencode('Status updated successfully'));
         } catch (Exception $e) {
             $this->redirect("index.php?action=lead_view&id={$leadId}&error=" . urlencode('Failed to update status: ' . $e->getMessage()));

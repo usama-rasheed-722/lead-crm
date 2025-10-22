@@ -125,9 +125,16 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="lead_source" class="form-label">Lead Source</label>
-                            <input type="text" class="form-control" id="lead_source" name="lead_source" 
-                                   value="<?= htmlspecialchars($lead['lead_source'] ?? '') ?>">
+                            <label for="lead_source_id" class="form-label">Lead Source</label>
+                            <select class="form-select" id="lead_source_id" name="lead_source_id">
+                                <option value="">Select Lead Source</option>
+                                <?php foreach ($leadSources as $source): ?>
+                                    <option value="<?= htmlspecialchars($source['id']) ?>" 
+                                            <?= ($lead['lead_source_id'] ?? '') == $source['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($source['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -149,9 +156,16 @@
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <input type="text" class="form-control" id="status" name="status" 
-                                   value="<?= htmlspecialchars($lead['status'] ?? '') ?>">
+                            <label for="status_id" class="form-label">Status</label>
+                            <select class="form-select" id="status_id" name="status_id">
+                                <option value="">Select Status</option>
+                                <?php foreach ($statuses as $status): ?>
+                                    <option value="<?= $status['id'] ?>" 
+                                        <?= ($lead['status_id'] ?? '') == $status['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($status['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                 </div>

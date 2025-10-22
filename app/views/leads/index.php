@@ -71,24 +71,25 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
+                <label for="status_id" class="form-label">Status</label>
+                <select class="form-select" id="status_id" name="status_id">
                     <option value="">All Statuses</option>
                     <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
-                        <option value="<?= htmlspecialchars($st['name']) ?>" <?= ($filters['status'] ?? '') === $st['name'] ? 'selected' : '' ?>>
+                        <option value="<?= $st['id'] ?>" <?= (isset($filters['status_id']) && $filters['status_id'] == $st['id']) ? 'selected' : '' ?>>
                             <?= htmlspecialchars($st['name']) ?>
                         </option>
                     <?php endforeach; endif; ?>
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="lead_source" class="form-label">Lead Source</label>
-                <select class="form-select" id="lead_source" name="lead_source">
+                <label for="lead_source_id" class="form-label">Lead Source</label>
+                <select class="form-select" id="lead_source_id" name="lead_source_id">
                     <option value="">All Sources</option>
-                    <?php
-                    $sources = ['linkedin' => 'LinkedIn', 'clutch' => 'Clutch', 'gmb' => 'GMB'];
-                    foreach ($sources as $key => $label): ?>
-                        <option value="<?= $key ?>" <?= ($filters['lead_source'] ?? '') === $key ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php foreach ($leadSources as $source): ?>
+                        <option value="<?= htmlspecialchars($source['id']) ?>" 
+                                <?= ($filters['lead_source_id'] ?? '') == $source['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($source['name']) ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -192,7 +193,7 @@
                                 </td>
                                 <td data-col-key="status">
                                     <span class="badge bg-secondary">
-                                        <?= htmlspecialchars($lead['status'] ?: 'New Lead') ?>
+                                        <?= htmlspecialchars($lead['status_name'] ?: 'New Lead') ?>
                                     </span>
                                 </td>
                                 <td data-col-key="sdr"><?= htmlspecialchars($lead['sdr_name'] ?: 'N/A') ?></td>
@@ -235,7 +236,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td data-col-key="industry"><?= htmlspecialchars($lead['industry'] ?: 'N/A') ?></td>
-                                <td data-col-key="lead_source"><?= htmlspecialchars($lead['lead_source'] ?: 'N/A') ?></td>
+                                <td data-col-key="lead_source"><?= htmlspecialchars($lead['lead_source_name'] ?: 'N/A') ?></td>
                                 <td data-col-key="tier"><?= htmlspecialchars($lead['tier'] ?: 'N/A') ?></td>
                                 <td data-col-key="lead_status"><?= htmlspecialchars($lead['lead_status'] ?: 'N/A') ?></td>
                                 <td data-col-key="clutch">
@@ -357,11 +358,11 @@
             <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="new_status" class="form-label">New Status</label>
-                        <select class="form-select" id="new_status" name="new_status" required>
+                        <label for="new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="new_status_id" name="new_status_id" required>
                             <option value="">Select Status</option>
                             <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
-                                <option value="<?= htmlspecialchars($st['name']) ?>">
+                                <option value="<?= $st['id'] ?>">
                                     <?= htmlspecialchars($st['name']) ?>
                                 </option>
                             <?php endforeach; endif; ?>
@@ -516,14 +517,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const bulkUpdateForm = document.getElementById('bulkUpdateForm');
     if (bulkUpdateForm) {
         bulkUpdateForm.addEventListener('submit', function(e) {
-            const newStatus = document.getElementById('new_status').value;
+            const newStatusId = document.getElementById('new_status_id').value;
+            const newStatusName = document.getElementById('new_status_id').selectedOptions[0]?.text || '';
             const count = selectedSet.size;
-            if (!newStatus || count === 0) {
+            if (!newStatusId || count === 0) {
                 e.preventDefault();
                 alert('Select leads and a status');
                 return;
             }
-            if (!confirm(`Are you sure you want to update the status to "${newStatus}" for ${count} selected lead(s)?`)) {
+            if (!confirm(`Are you sure you want to update the status to "${newStatusName}" for ${count} selected lead(s)?`)) {
                 e.preventDefault();
             }
         });

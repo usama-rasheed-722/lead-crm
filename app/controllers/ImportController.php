@@ -104,7 +104,8 @@ class ImportController extends Controller {
         if (!empty($_GET['duplicate_status'])) { $filters['duplicate_status'] = $_GET['duplicate_status']; }
         if (!empty($_GET['date_from'])) { $filters['date_from'] = $_GET['date_from']; }
         if (!empty($_GET['date_to'])) { $filters['date_to'] = $_GET['date_to']; }
-        if (!empty($_GET['lead_source'])) { $filters['lead_source'] = $_GET['lead_source']; }
+        if (!empty($_GET['lead_source_id'])) { $filters['lead_source_id'] = $_GET['lead_source_id']; }
+        if (!empty($_GET['status_id'])) { $filters['status_id'] = $_GET['status_id']; }
         if (!empty($_GET['sdr_id'])) { $filters['sdr_id'] = $_GET['sdr_id']; }
         if (!empty($_GET['search'])) { $search = $_GET['search']; } else { $search = ''; }
         
@@ -129,7 +130,8 @@ class ImportController extends Controller {
         if (!empty($_GET['duplicate_status'])) { $filters['duplicate_status'] = $_GET['duplicate_status']; }
         if (!empty($_GET['date_from'])) { $filters['date_from'] = $_GET['date_from']; }
         if (!empty($_GET['date_to'])) { $filters['date_to'] = $_GET['date_to']; }
-        if (!empty($_GET['lead_source'])) { $filters['lead_source'] = $_GET['lead_source']; }
+        if (!empty($_GET['lead_source_id'])) { $filters['lead_source_id'] = $_GET['lead_source_id']; }
+        if (!empty($_GET['status_id'])) { $filters['status_id'] = $_GET['status_id']; }
         if (!empty($_GET['sdr_id'])) { $filters['sdr_id'] = $_GET['sdr_id']; }
         if (!empty($_GET['search'])) { $search = $_GET['search']; } else { $search = ''; }
         

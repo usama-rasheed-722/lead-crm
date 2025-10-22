@@ -80,6 +80,12 @@
                                 <i class="fas fa-tags me-2"></i>Status Management
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'lead_sources' ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=lead_sources') ?>">
+                                <i class="fas fa-source me-2"></i>Lead Sources
+                            </a>
+                        </li>
                         <?php endif; ?>
                     </ul>
                 </div>

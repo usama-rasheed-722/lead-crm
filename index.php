@@ -135,16 +135,19 @@ switch ($action) {
         (new LeadSourceController())->store();
         break;
     case 'lead_source_edit':
-        (new LeadSourceController())->edit();
+        (new LeadSourceController())->edit($_GET['id'] ?? null);
         break;
     case 'lead_source_update':
-        (new LeadSourceController())->update();
+        (new LeadSourceController())->update($_GET['id'] ?? null);
         break;
     case 'lead_source_delete':
-        (new LeadSourceController())->delete();
+        (new LeadSourceController())->delete($_GET['id'] ?? null);
         break;
     case 'lead_source_toggle_active':
-        (new LeadSourceController())->toggleActive();
+        (new LeadSourceController())->toggleActive($_GET['id'] ?? null);
+        break;
+    case 'get_lead_sources':
+        (new LeadSourceController())->getLeadSources();
         break;
     case 'import':
         (new ImportController())->index();

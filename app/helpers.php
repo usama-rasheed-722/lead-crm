@@ -33,6 +33,7 @@ return preg_replace('/[^0-9+]/', '', $p);
 
 
 function pr(...$pre){
+    echo "<pre>";
     print_r($pre);
 
     if(end($pre) == 1){

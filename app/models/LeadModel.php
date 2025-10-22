@@ -9,9 +9,10 @@ class LeadModel extends BaseModel {
         $status = $this->detectDuplicateStatus($data);
         
         // Set default status if not provided
-        if (empty($data['status'])) {
+        if (empty($data['status_id'])) {
             $statusModel = new StatusModel();
-            $data['status'] = $statusModel->getDefaultStatusName();
+            $defaultStatus = $statusModel->getDefaultStatus();
+            $data['status_id'] = $defaultStatus ? $defaultStatus['id'] : null;
         }
 
         $stmt = $this->pdo->prepare("
@@ -20,9 +21,9 @@ class LeadModel extends BaseModel {
             sdr_id, duplicate_status, notes, created_by,
               lead_owner, contact_name, job_title, industry, lead_source, lead_source_id,
             tier, lead_status, insta, social_profile, address, description_information,
-            whatsapp, next_step, other, status, country, sdr_name
+            whatsapp, next_step, other, status, status_id, country, sdr_name
         )
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ");
     
         $stmt->execute([
@@ -45,6 +46,7 @@ class LeadModel extends BaseModel {
             $data['next_step'] ?? null,
             $data['other'] ?? null,
             $data['status'] ?? 'New Lead',
+            $data['status_id'] ?? null,
             $data['country'] ?? null,
             $data['sdr_name'] ?? null
         ]);
@@ -53,10 +55,11 @@ class LeadModel extends BaseModel {
         
         // Log initial status if it's not the default status
         $statusModel = new StatusModel();
-        $defaultStatusName = $statusModel->getDefaultStatusName();
-        if ($data['status'] !== $defaultStatusName) {
+        $defaultStatus = $statusModel->getDefaultStatus();
+        if ($data['status_id'] && $data['status_id'] !== $defaultStatus['id']) {
             $customFieldsData = $data['custom_fields_data'] ?? null;
-            $this->logStatusChange($leadId, null, $data['status'], $data['created_by'], $customFieldsData);
+            $statusName = $statusModel->getById($data['status_id'])['name'] ?? null;
+            $this->logStatusChange($leadId, null, $statusName, $data['created_by'], $customFieldsData);
         }
 
         return $leadId;
@@ -68,14 +71,14 @@ class LeadModel extends BaseModel {
         
         // Get current lead data to check for status changes
         $currentLead = $this->getById($id);
-        $oldStatus = $currentLead['status'] ?? null;
-        $newStatus = $data['status'] ?? null;
+        $oldStatusId = $currentLead['status_id'] ?? null;
+        $newStatusId = $data['status_id'] ?? null;
         
         $stmt = $this->pdo->prepare("
             UPDATE leads SET
                 name=?, company=?, email=?, phone=?, linkedin=?, website=?, clutch=?, sdr_id=?, duplicate_status=?, notes=?,
-                  lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source=?, tier=?, lead_status=?,
-                insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?, status=?, country=?, sdr_name=?,
+lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?, lead_status=?,
+                insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?, status=?, status_id=?, country=?, sdr_name=?,
                 updated_at=NOW()
             WHERE id=?
         ");
@@ -87,7 +90,7 @@ class LeadModel extends BaseModel {
             $data['contact_name'] ?? null,
             $data['job_title'] ?? null,
             $data['industry'] ?? null,
-            $data['lead_source'] ?? null,
+            $data['lead_source_id'] ?? null,
             $data['tier'] ?? null,
             $data['lead_status'] ?? null,
             $data['insta'] ?? null,
@@ -98,16 +101,20 @@ class LeadModel extends BaseModel {
             $data['next_step'] ?? null,
             $data['other'] ?? null,
             $data['status'] ?? null,
+            $data['status_id'] ?? null,
             $data['country'] ?? null,
             $data['sdr_name'] ?? null,
             $id
         ]);
         
         // Log status change if status was updated
-        if ($result && $oldStatus !== $newStatus && !empty($newStatus)) {
+        if ($result && $oldStatusId !== $newStatusId && !empty($newStatusId)) {
             $changedBy = $data['changed_by'] ?? $currentLead['created_by'];
             $customFieldsData = $data['custom_fields_data'] ?? null;
-            $this->logStatusChange($id, $oldStatus, $newStatus, $changedBy, $customFieldsData);
+            $statusModel = new StatusModel();
+            $oldStatusName = $oldStatusId ? $statusModel->getById($oldStatusId)['name'] ?? null : null;
+            $newStatusName = $statusModel->getById($newStatusId)['name'] ?? null;
+            $this->logStatusChange($id, $oldStatusName, $newStatusName, $changedBy, $customFieldsData);
         }
         
         return $result;
@@ -121,7 +128,7 @@ class LeadModel extends BaseModel {
 
     // Get a single lead by ID
     public function getById($id){
-        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id WHERE l.id = ?');
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id WHERE l.id = ?');
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
@@ -165,13 +172,13 @@ class LeadModel extends BaseModel {
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
         if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
-        if(!empty($filters['lead_source'])){ $where[]='l.lead_source = ?'; $params[] = $filters['lead_source']; }
-        if(!empty($filters['status'])){ $where[]='l.status = ?'; $params[] = $filters['status']; }
+        if(!empty($filters['lead_source_id'])){ $where[]='l.lead_source_id = ?'; $params[] = $filters['lead_source_id']; }
+        if(!empty($filters['status_id'])){ $where[]='l.status_id = ?'; $params[] = $filters['status_id']; }
         if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
         if(!empty($filters['date_from'])){ $where[]='date(l.created_at) >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='date(l.created_at) <= ?'; $params[] = $filters['date_to']; }
 
-        $sql = 'SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id';
+        $sql = 'SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id';
         if($where) $sql .= ' WHERE '.implode(' AND ',$where);
         $sql .= ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
         $params[] = (int)$limit; $params[] = (int)$offset;
@@ -208,9 +215,9 @@ class LeadModel extends BaseModel {
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
         if(!empty($filters['lead_status'])){ $where[]='l.lead_status = ?'; $params[] = $filters['lead_status']; }
-        if(!empty($filters['lead_source'])){ $where[]='l.lead_source = ?'; $params[] = $filters['lead_source']; }
+        if(!empty($filters['lead_source_id'])){ $where[]='l.lead_source_id = ?'; $params[] = $filters['lead_source_id']; }
         if(!empty($filters['tier'])){ $where[]='l.tier = ?'; $params[] = $filters['tier']; }
-        if(!empty($filters['status'])){ $where[]='l.status = ?'; $params[] = $filters['status']; }
+        if(!empty($filters['status_id'])){ $where[]='l.status_id = ?'; $params[] = $filters['status_id']; }
         if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
 
@@ -269,6 +276,17 @@ class LeadModel extends BaseModel {
                 $leadSourceMap[$source['name']] = $source['id'];
             }
             
+            // Get status mapping
+            $statusModel = new StatusModel();
+            $statuses = $statusModel->all();
+            $statusMap = [];
+            foreach ($statuses as $status) {
+                $statusMap[$status['name']] = $status['id'];
+            }
+            
+            // Get default status
+            $defaultStatus = $statusModel->getDefaultStatus();
+            
             foreach($rows as $r){
                 $sdr_id = $r['sdr_id'] ?? $current_user_sdr_id;
                 $r['sdr_id'] = $current_user_sdr_id;
@@ -281,6 +299,13 @@ class LeadModel extends BaseModel {
                         $r['lead_source_id'] = $leadSourceMap[$r['lead_source']];
                     }
                     // Keep the original lead_source field for backward compatibility
+                }
+                
+                // Handle status mapping
+                if (isset($r['status']) && !empty($r['status'])) {
+                    $r['status_id'] = $statusMap[$r['status']] ?? $defaultStatus['id'];
+                } else {
+                    $r['status_id'] = $defaultStatus['id'];
                 }
                 
                 $id = $this->create($r);
@@ -306,9 +331,9 @@ class LeadModel extends BaseModel {
         foreach($leads as $lead){
             fputcsv($f, [
                 $lead['lead_id'],$lead['name'],$lead['company'],$lead['email'],$lead['phone'],$lead['linkedin'],$lead['website'],$lead['clutch'],
-                $lead['lead_owner'],$lead['contact_name'],$lead['job_title'],$lead['industry'],$lead['lead_source'],$lead['tier'],$lead['lead_status'],
+                $lead['lead_owner'],$lead['contact_name'],$lead['job_title'],$lead['industry'],$lead['lead_source_name'],$lead['tier'],$lead['lead_status'],
                 $lead['insta'],$lead['social_profile'],$lead['address'],$lead['description_information'],$lead['whatsapp'],$lead['next_step'],$lead['other'],
-                $lead['status'],$lead['country'],$lead['sdr_name'],$lead['duplicate_status'],$lead['notes']
+                $lead['status_name'],$lead['country'],$lead['sdr_name'],$lead['duplicate_status'],$lead['notes']
             ]);
         }
         rewind($f);
@@ -561,8 +586,8 @@ class LeadModel extends BaseModel {
     }
 
     // Bulk update status for multiple leads
-    public function bulkUpdateStatus($leadIds, $newStatus, $changedBy) {
-        if (empty($leadIds) || empty($newStatus)) {
+    public function bulkUpdateStatus($leadIds, $newStatusId, $changedBy) {
+        if (empty($leadIds) || empty($newStatusId)) {
             return false;
         }
         
@@ -571,19 +596,24 @@ class LeadModel extends BaseModel {
             $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
             
             // Get current statuses for logging
-            $stmt = $this->pdo->prepare("SELECT id, status FROM leads WHERE id IN ($placeholders)");
+            $stmt = $this->pdo->prepare("SELECT id, status_id FROM leads WHERE id IN ($placeholders)");
             $stmt->execute($leadIds);
             $currentLeads = $stmt->fetchAll();
             
+            // Get status names for logging
+            $statusModel = new StatusModel();
+            $newStatusName = $statusModel->getById($newStatusId)['name'] ?? null;
+            
             // Update statuses
-            $stmt = $this->pdo->prepare("UPDATE leads SET status = ?, updated_at = NOW() WHERE id IN ($placeholders)");
-            $params = array_merge([$newStatus], $leadIds);
+            $stmt = $this->pdo->prepare("UPDATE leads SET status_id = ?, updated_at = NOW() WHERE id IN ($placeholders)");
+            $params = array_merge([$newStatusId], $leadIds);
             $stmt->execute($params);
             
             // Log status changes
             foreach ($currentLeads as $lead) {
-                if ($lead['status'] !== $newStatus) {
-                    $this->logStatusChange($lead['id'], $lead['status'], $newStatus, $changedBy);
+                if ($lead['status_id'] != $newStatusId) {
+                    $oldStatusName = $lead['status_id'] ? $statusModel->getById($lead['status_id'])['name'] ?? null : null;
+                    $this->logStatusChange($lead['id'], $oldStatusName, $newStatusName, $changedBy);
                 }
             }
             
@@ -597,8 +627,8 @@ class LeadModel extends BaseModel {
     }
 
     // Update status for a single lead with custom fields
-    public function updateStatusWithCustomFields($leadId, $newStatus, $changedBy, $customFieldsData = null) {
-        if (empty($leadId) || empty($newStatus)) {
+    public function updateStatusWithCustomFields($leadId, $newStatusId, $changedBy, $customFieldsData = null) {
+        if (empty($leadId) || empty($newStatusId)) {
             return false;
         }
         
@@ -610,15 +640,20 @@ class LeadModel extends BaseModel {
                 throw new Exception('Lead not found');
             }
             
-            $oldStatus = $currentLead['status'];
+            $oldStatusId = $currentLead['status_id'];
+            
+            // Get status names for logging
+            $statusModel = new StatusModel();
+            $oldStatusName = $oldStatusId ? $statusModel->getById($oldStatusId)['name'] ?? null : null;
+            $newStatusName = $statusModel->getById($newStatusId)['name'] ?? null;
             
             // Update status
-            $stmt = $this->pdo->prepare("UPDATE leads SET status = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$newStatus, $leadId]);
+            $stmt = $this->pdo->prepare("UPDATE leads SET status_id = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$newStatusId, $leadId]);
             
             // Log status change with custom fields data
-            if ($oldStatus !== $newStatus) {
-                $this->logStatusChange($leadId, $oldStatus, $newStatus, $changedBy, $customFieldsData);
+            if ($oldStatusId != $newStatusId) {
+                $this->logStatusChange($leadId, $oldStatusName, $newStatusName, $changedBy, $customFieldsData);
             }
             
             $this->pdo->commit();

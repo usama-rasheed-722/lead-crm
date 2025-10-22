@@ -148,7 +148,7 @@
                             </tr>
                             <tr>
                                 <td class="fw-bold">Lead Source:</td>
-                                <td><?= htmlspecialchars($lead['lead_source'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['lead_source_name'] ?: 'N/A') ?></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">Tier:</td>
@@ -188,7 +188,7 @@
                             </tr>
                             <tr>
                                 <td class="fw-bold">Status:</td>
-                                <td><?= htmlspecialchars($lead['status'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($lead['status_name'] ?: 'N/A') ?></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">SDR:</td>
@@ -259,18 +259,18 @@
                 <form method="POST" action="index.php?action=update_status_with_custom_fields" id="statusChangeForm">
                     <input type="hidden" name="lead_id" value="<?= $lead['id'] ?>">
                     <div class="mb-3">
-                        <label for="new_status" class="form-label">New Status</label>
-                        <select class="form-select" id="new_status" name="new_status" required>
+                        <label for="new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="new_status_id" name="new_status_id" required>
                             <option value="">Select Status</option>
                             <?php
                             $statusModel = new StatusModel();
                             $statuses = $statusModel->all();
                             foreach ($statuses as $status):
-                                if ($status['name'] !== $lead['status']):
+                                if ($status['id'] != $lead['status_id']):
                                     $customFields = $statusModel->getCustomFieldsByName($status['name']);
                                     $hasFields = count($customFields) > 0;
                             ?>
-                                <option value="<?= htmlspecialchars($status['name']) ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                <option value="<?= $status['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
                                     <?= htmlspecialchars($status['name']) ?><?= $hasFields ? ' 📝' : '' ?>
                                 </option>
                             <?php
@@ -429,18 +429,18 @@
                     <input type="hidden" name="lead_id" value="<?= $lead['id'] ?>">
                     
                     <div class="mb-3">
-                        <label for="quick_new_status" class="form-label">New Status</label>
-                        <select class="form-select" id="quick_new_status" name="new_status" required>
+                        <label for="quick_new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="quick_new_status_id" name="new_status_id" required>
                             <option value="">Select Status</option>
                             <?php
                             $statusModel = new StatusModel();
                             $statuses = $statusModel->all();
                             foreach ($statuses as $status):
-                                if ($status['name'] !== $lead['status']):
+                                if ($status['id'] != $lead['status_id']):
                                     $customFields = $statusModel->getCustomFieldsByName($status['name']);
                                     $hasFields = count($customFields) > 0;
                             ?>
-                                <option value="<?= htmlspecialchars($status['name']) ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                <option value="<?= $status['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
                                     <?= htmlspecialchars($status['name']) ?><?= $hasFields ? ' 📝' : '' ?>
                                 </option>
                             <?php
@@ -459,7 +459,7 @@
                     
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        Current status: <strong><?= htmlspecialchars($lead['status'] ?: 'New Lead') ?></strong>
+                        Current status: <strong><?= htmlspecialchars($lead['status_name'] ?: 'New Lead') ?></strong>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -516,25 +516,26 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const statusSelect = document.getElementById('new_status');
+    const statusSelect = document.getElementById('new_status_id');
     const customFieldsContainer = document.getElementById('customFieldsContainer');
-    const quickStatusSelect = document.getElementById('quick_new_status');
+    const quickStatusSelect = document.getElementById('quick_new_status_id');
     const quickCustomFieldsContainer = document.getElementById('quickCustomFieldsContainer');
     
     // Handle sidebar status change
     if (statusSelect) {
         statusSelect.addEventListener('change', function() {
-            const selectedStatus = this.value;
+            const selectedStatusId = this.value;
+            const selectedStatusName = this.selectedOptions[0]?.text?.replace(' 📝', '') || '';
             
             // Clear previous custom fields
             customFieldsContainer.innerHTML = '';
             
-            if (selectedStatus) {
+            if (selectedStatusId) {
                 // Show loading indicator
                 customFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatus)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
                     .then(response => response.json())
                     .then(data => {
                         customFieldsContainer.innerHTML = '';
@@ -563,17 +564,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle quick status change modal
     if (quickStatusSelect) {
         quickStatusSelect.addEventListener('change', function() {
-            const selectedStatus = this.value;
+            const selectedStatusId = this.value;
+            const selectedStatusName = this.selectedOptions[0]?.text?.replace(' 📝', '') || '';
             
             // Clear previous custom fields
             quickCustomFieldsContainer.innerHTML = '';
             
-            if (selectedStatus) {
+            if (selectedStatusId) {
                 // Show loading indicator
                 quickCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatus)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
                     .then(response => response.json())
                     .then(data => {
                         quickCustomFieldsContainer.innerHTML = '';
