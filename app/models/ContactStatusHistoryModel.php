@@ -1,5 +1,5 @@
 <?php
-class ContactStatusHistoryModel extends BaseModel {
+class ContactStatusHistoryModel extends Model {
 
     // Log status change
     public function logStatusChange($leadId, $oldStatus, $newStatus, $changedBy) {

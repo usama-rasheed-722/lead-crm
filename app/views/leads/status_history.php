@@ -46,7 +46,7 @@
                         <p><strong>Email:</strong> <?= htmlspecialchars($lead['email'] ?: 'N/A') ?></p>
                         <p><strong>Phone:</strong> <?= htmlspecialchars($lead['phone'] ?: 'N/A') ?></p>
                         <p><strong>Current Status:</strong> 
-                            <span class="badge bg-primary"><?= htmlspecialchars($lead['status'] ?: 'New Lead') ?></span>
+                            <span class="badge bg-primary"><?= htmlspecialchars($lead['status_name'] ?: 'New Lead') ?></span>
                         </p>
                     </div>
                 </div>
@@ -145,6 +145,7 @@
                             <?php if (!empty($h['custom_fields_data'])): ?>
                                 <?php 
                                 $customData = json_decode($h['custom_fields_data'], true);
+                                // pr($h ,1);
                                 if ($customData && count($customData) > 0):
                                 ?>
                                     <tr class="collapse" id="customFields_<?= $h['id'] ?>">

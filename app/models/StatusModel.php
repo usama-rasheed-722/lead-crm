@@ -48,7 +48,7 @@ class StatusModel extends Model {
     // Delete status
     public function delete($id) {
         // Check if status is being used by any leads
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads WHERE status = (SELECT name FROM status WHERE id = ?)');
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads WHERE status_id = ?');
         $stmt->execute([$id]);
         $count = $stmt->fetchColumn();
         

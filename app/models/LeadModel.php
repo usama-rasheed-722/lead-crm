@@ -19,7 +19,7 @@ class LeadModel extends Model {
         INSERT INTO leads (
             lead_id, name, company, email, phone, linkedin, website, clutch,
             sdr_id, duplicate_status, notes, created_by,
-              lead_owner, contact_name, job_title, industry, lead_source, lead_source_id,
+              lead_owner, contact_name, job_title, industry, lead_source_id,
             tier, lead_status, insta, social_profile, address, description_information,
             whatsapp, next_step, other, status, status_id, country, sdr_name
         )
@@ -33,8 +33,7 @@ class LeadModel extends Model {
             $data['lead_owner'] ?? null,
             $data['contact_name'] ?? null,
             $data['job_title'] ?? null,
-            $data['industry'] ?? null,
-            $data['lead_source'] ?? null,
+            $data['industry'] ?? null, 
             $data['lead_source_id'] ?? null,
             $data['tier'] ?? null,
             $data['lead_status'] ?? null,
@@ -147,7 +146,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         $where = [];
         $params = [];
         if($q){
-            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR l.lead_source LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR ls.name LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
             $like = '%'.$q.'%';
             for($i=0;$i<19;$i++) $params[] = $like;
         }
@@ -192,7 +191,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         $where = [];
         $params = [];
         if($q){
-            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR l.lead_source LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
+            $where[] = "(l.email LIKE ? OR l.company LIKE ? OR l.name LIKE ? OR l.website LIKE ? OR l.clutch LIKE ? OR l.linkedin LIKE ? OR l.phone LIKE ? OR l.contact_name LIKE ? OR l.job_title LIKE ? OR l.industry LIKE ? OR ls.name LIKE ? OR l.tier LIKE ? OR l.lead_status LIKE ? OR l.address LIKE ? OR l.country LIKE ? OR l.whatsapp LIKE ? OR l.next_step LIKE ? OR l.other LIKE ? OR l.notes LIKE ?)";
             $like = '%'.$q.'%';
             for($i=0;$i<19;$i++) $params[] = $like;
         }
@@ -339,7 +338,9 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 
                 // Handle lead source mapping - strict mode: fail if no match found
                 $lead_source_id = null;
-                if (isset($r['lead_source']) && !empty($r['lead_source'])) {
+                if (isset($r['lead_source_id']) && !empty($r['lead_source_id'])) {
+                    $lead_source_id = $r['lead_source_id'];
+                } else if (isset($r['lead_source']) && !empty($r['lead_source'])) {
                     $leadSourceName = strtolower(trim($r['lead_source']));
                     if (isset($leadSourceMap[$leadSourceName])) {
                         $lead_source_id = $leadSourceMap[$leadSourceName];
@@ -687,20 +688,18 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         $stmt->execute($params);
         $incomplete = (int)$stmt->fetchColumn();
 
-        // Extra cards: counts by lead_source
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'linkedin'"));
-        $stmt->execute($params);
-        $linkedin = (int)$stmt->fetchColumn();
+        // Dynamic lead source counts - get all lead sources and their counts
+        $leadSourceModel = new LeadSourceModel();
+        $leadSources = $leadSourceModel->all();
+        $leadSourceCounts = [];
+        
+        foreach ($leadSources as $source) {
+            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("lead_source_id = ?"));
+            $stmt->execute(array_merge($params, [$source['id']]));
+            $leadSourceCounts[strtolower(str_replace(' ', '_', $source['name']))] = (int)$stmt->fetchColumn();
+        }
 
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'clutch'"));
-        $stmt->execute($params);
-        $clutch = (int)$stmt->fetchColumn();
-
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $buildWhere("LOWER(lead_source) = 'gmb'"));
-        $stmt->execute($params);
-        $gmb = (int)$stmt->fetchColumn();
-
-        return compact('total','unique','duplicate','incomplete','linkedin','clutch','gmb');
+        return compact('total','unique','duplicate','incomplete') + $leadSourceCounts;
     }
 
     // Bulk update status for multiple leads

@@ -61,30 +61,25 @@
             </div>
         </div>
     </div>
+    <?php 
+    // Display lead source cards dynamically
+    $leadSourceKeys = array_filter(array_keys($summary), function($key) {
+        return !in_array($key, ['total', 'unique', 'duplicate', 'incomplete']);
+    });
+    
+    foreach ($leadSourceKeys as $key): 
+        $count = $summary[$key] ?? 0;
+        $label = ucwords(str_replace('_', ' ', $key));
+    ?>
     <div class="col-md-2">
         <div class="card summary-card">
             <div class="card-body">
-                <div class="number text-info"><?= $summary['linkedin'] ?? 0 ?></div>
-                <div class="label">LinkedIn</div>
+                <div class="number text-info"><?= $count ?></div>
+                <div class="label"><?= htmlspecialchars($label) ?></div>
             </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card summary-card">
-            <div class="card-body">
-                <div class="number text-info"><?= $summary['clutch'] ?? 0 ?></div>
-                <div class="label">Clutch</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2 mt-3">
-        <div class="card summary-card">
-            <div class="card-body">
-                <div class="number text-info"><?= $summary['gmb'] ?? 0 ?></div>
-                <div class="label">GMB</div>
-            </div>
-        </div>
-    </div>
+    <?php endforeach; ?>
 </div>
 
 <div class="row">

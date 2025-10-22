@@ -559,7 +559,8 @@ class LeadController extends Controller {
         
         // Get custom fields for the new status
         $statusModel = new StatusModel();
-        $customFields = $statusModel->getCustomFieldsByName($newStatus);
+        $newStatus = $statusModel->getById($newStatusId);
+        $customFields = $statusModel->getCustomFieldsByName($newStatus['name']);
         
         // Collect custom fields data
         $customFieldsData = [];
