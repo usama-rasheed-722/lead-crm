@@ -5,9 +5,15 @@
         <i class="fas fa-<?= $action === 'edit' ? 'edit' : 'plus' ?> me-2"></i>
         <?= $action === 'edit' ? 'Edit Lead' : 'Add New Lead' ?>
     </h2>
-    <a href="index.php?action=leads" class="btn btn-outline-secondary">
+  <div>
+  <a href="index.php?action=lead_add" class="btn btn-outline-primary me-2">
+        <i class="fas fa-plus me-2"></i>Add Lead
+    </a>
+  <a href="index.php?action=leads" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-2"></i>Back to Leads
     </a>
+
+  </div>
 </div>
 
 <div class="row justify-content-center">

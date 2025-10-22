@@ -1,11 +1,6 @@
 <?php
 
-class LeadSourceModel {
-    private $pdo;
-    
-    public function __construct() {
-        $this->pdo = Database::getInstance()->getConnection();
-    }
+class LeadSourceModel extends Model {
     
     // Get all lead sources
     public function all() {

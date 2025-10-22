@@ -31,11 +31,11 @@
                 
                 <form method="POST" action="index.php?action=import_upload" enctype="multipart/form-data">
                     <div class="mb-3">
-                        <label for="csv_file" class="form-label">Select CSV/Excel File</label>
+                        <label for="csv_file" class="form-label">Select CSV</label>
                         <input type="file" class="form-control" id="csv_file" name="csv_file" 
                                accept=".csv,.xlsx,.xls" required>
                         <div class="form-text">
-                            Supported formats: CSV, Excel (.xlsx, .xls)
+                            Supported formats: CSV (.csv)
                         </div>
                     </div>
                     

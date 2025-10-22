@@ -59,35 +59,70 @@ class ImportController extends Controller {
         $statuses = $this->statusModel->all();
         $leadSources = $this->leadSourceModel->getActive();
         
-        $validStatusNames = array_column($statuses, 'name');
-        $validLeadSourceNames = array_column($leadSources, 'name');
+        // Create case-insensitive lookup maps
+        $validStatusNames = [];
+        $validLeadSourceNames = [];
         
-        $errors = [];
-        
-        foreach ($data as $index => $row) {
-            $rowNumber = $index + 1;
+        foreach ($statuses as $status) {
+            $statusName = strtolower(trim($status['name']));
+            $validStatusNames[$statusName] = $status['name'];
             
-            // Validate status
-            if (isset($row['status']) && !empty($row['status'])) {
-                if (!in_array($row['status'], $validStatusNames)) {
-                    $errors[] = "Row {$rowNumber}: Invalid status '{$row['status']}'. Valid statuses are: " . implode(', ', $validStatusNames);
+            // Add fuzzy matching for common variations
+            if (strpos($statusName, 'follow up') !== false) {
+                // Handle "Follow up in 3 days" vs "Follow up in 3 day"
+                $fuzzyName = str_replace('days', 'day', $statusName);
+                if ($fuzzyName !== $statusName) {
+                    $validStatusNames[$fuzzyName] = $status['name'];
                 }
-            }
-            
-            // Validate lead source
-            if (isset($row['lead_source']) && !empty($row['lead_source'])) {
-                if (!in_array($row['lead_source'], $validLeadSourceNames)) {
-                    $errors[] = "Row {$rowNumber}: Invalid lead source '{$row['lead_source']}'. Valid lead sources are: " . implode(', ', $validLeadSourceNames);
+                $fuzzyName = str_replace('day', 'days', $statusName);
+                if ($fuzzyName !== $statusName) {
+                    $validStatusNames[$fuzzyName] = $status['name'];
                 }
             }
         }
         
-        if (!empty($errors)) {
-            $errorMessage = "Validation failed:\n" . implode("\n", array_slice($errors, 0, 10));
-            if (count($errors) > 10) {
-                $errorMessage .= "\n... and " . (count($errors) - 10) . " more errors.";
+        foreach ($leadSources as $source) {
+            $validLeadSourceNames[strtolower(trim($source['name']))] = $source['name'];
+        }
+        
+        $invalidStatuses = [];
+        $invalidLeadSources = [];
+        
+        foreach ($data as $index => $row) {
+            // Validate status (case-insensitive)
+            if (isset($row['status']) && !empty($row['status'])) {
+                $statusKey = strtolower(trim($row['status']));
+                if (!isset($validStatusNames[$statusKey])) {
+                    $invalidStatuses[$row['status']] = true;
+                }
             }
-            throw new Exception($errorMessage);
+            
+            // Validate lead source (case-insensitive)
+            if (isset($row['lead_source']) && !empty($row['lead_source'])) {
+                $sourceKey = strtolower(trim($row['lead_source']));
+                if (!isset($validLeadSourceNames[$sourceKey])) {
+                    $invalidLeadSources[$row['lead_source']] = true;
+                }
+            }
+        }
+        
+        // Build summary error message
+        $errorMessages = [];
+        
+        if (!empty($invalidStatuses)) {
+            $invalidStatusList = implode(', ', array_keys($invalidStatuses));
+            $validStatusList = implode(', ', array_values($validStatusNames));
+            $errorMessages[] = "Invalid status values found: {$invalidStatusList}. Valid statuses are: {$validStatusList}";
+        }
+        
+        if (!empty($invalidLeadSources)) {
+            $invalidSourceList = implode(', ', array_keys($invalidLeadSources));
+            $validSourceList = implode(', ', array_values($validLeadSourceNames));
+            $errorMessages[] = "Invalid lead source values found: {$invalidSourceList}. Valid lead sources are: {$validSourceList}";
+        }
+        
+        if (!empty($errorMessages)) {
+            throw new Exception("Validation failed:\n" . implode("\n", $errorMessages));
         }
     }
     
@@ -261,4 +296,5 @@ class ImportController extends Controller {
         return $formatted;
     }
 }
+?>
 ?>

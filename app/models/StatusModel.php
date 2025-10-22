@@ -1,5 +1,5 @@
 <?php
-class StatusModel extends BaseModel {
+class StatusModel extends Model {
 
     // Get all statuses
     public function all() {

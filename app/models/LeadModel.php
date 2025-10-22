@@ -1,5 +1,5 @@
 <?php
-class LeadModel extends BaseModel {
+class LeadModel extends Model {
 
     // Create a new lead with duplicate detection and auto lead_id if not provided
     public function create($data){
@@ -262,61 +262,179 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         return generateNextSDR($sdr_id);
     }
 
-    // Bulk insert (CSV import)
+    // Bulk insert (CSV import) - Optimized for performance
     public function bulkInsert($rows, $created_by_user_id, $current_user_sdr_id){
+        if (empty($rows)) {
+            return 0;
+        }
+        
         $this->pdo->beginTransaction();
-        $leadIds = [];
         
         try{
-            // Get lead source mapping
+            // Preload reference data efficiently (fetch once only)
             $leadSourceModel = new LeadSourceModel();
             $leadSources = $leadSourceModel->getActive();
             $leadSourceMap = [];
             foreach ($leadSources as $source) {
-                $leadSourceMap[$source['name']] = $source['id'];
+                $leadSourceMap[strtolower(trim($source['name']))] = $source['id'];
             }
             
-            // Get status mapping
             $statusModel = new StatusModel();
             $statuses = $statusModel->all();
             $statusMap = [];
             foreach ($statuses as $status) {
-                $statusMap[$status['name']] = $status['id'];
+                $statusName = strtolower(trim($status['name']));
+                $statusMap[$statusName] = $status['id'];
+                
+                // Add fuzzy matching for common variations
+                if (strpos($statusName, 'follow up') !== false) {
+                    // Handle "Follow up in 3 days" vs "Follow up in 3 day"
+                    $fuzzyName = str_replace('days', 'day', $statusName);
+                    if ($fuzzyName !== $statusName) {
+                        $statusMap[$fuzzyName] = $status['id'];
+                    }
+                    $fuzzyName = str_replace('day', 'days', $statusName);
+                    if ($fuzzyName !== $statusName) {
+                        $statusMap[$fuzzyName] = $status['id'];
+                    }
+                }
             }
             
-            // Get default status
             $defaultStatus = $statusModel->getDefaultStatus();
+            $defaultStatusId = $defaultStatus ? $defaultStatus['id'] : null;
+            
+            // Prepare batch insert data
+            $insertData = [];
+            $leadIds = [];
+            
+            // Get the highest existing lead ID for this SDR to avoid conflicts
+            $stmt = $this->pdo->prepare('
+                SELECT lead_id 
+                FROM leads 
+                WHERE lead_id LIKE ? 
+                ORDER BY id DESC 
+                LIMIT 1
+            ');
+            $pattern = "SDR{$current_user_sdr_id}-%";
+            $stmt->execute([$pattern]);
+            $latestLead = $stmt->fetch();
+            
+            $nextNumber = 1;
+            if ($latestLead && !empty($latestLead['lead_id'])) {
+                if (preg_match('/SDR' . $current_user_sdr_id . '-(\d+)/', $latestLead['lead_id'], $matches)) {
+                    $lastNumber = (int) $matches[1];
+                    $nextNumber = $lastNumber + 1;
+                }
+            }
             
             foreach($rows as $r){
                 $sdr_id = $r['sdr_id'] ?? $current_user_sdr_id;
-                $r['sdr_id'] = $current_user_sdr_id;
-                $r['lead_id'] = $this->generateLeadId($sdr_id);
-                $r['created_by'] = $created_by_user_id;
                 
-                // Handle lead source mapping
+                // Generate unique lead ID for this batch
+                $formattedNumber = str_pad($nextNumber, 10, '0', STR_PAD_LEFT);
+                $lead_id = "SDR{$sdr_id}-{$formattedNumber}";
+                $nextNumber++; // Increment for next lead in the batch
+                
+                $duplicate_status = $this->detectDuplicateStatus($r);
+                
+                // Handle lead source mapping - strict mode: fail if no match found
+                $lead_source_id = null;
                 if (isset($r['lead_source']) && !empty($r['lead_source'])) {
-                    if (isset($leadSourceMap[$r['lead_source']])) {
-                        $r['lead_source_id'] = $leadSourceMap[$r['lead_source']];
+                    $leadSourceName = strtolower(trim($r['lead_source']));
+                    if (isset($leadSourceMap[$leadSourceName])) {
+                        $lead_source_id = $leadSourceMap[$leadSourceName];
+                    } else {
+                        // If lead source is provided but no match found, throw error
+                        throw new Exception("Lead source '{$r['lead_source']}' not found in system. Please check your CSV data.");
                     }
-                    // Keep the original lead_source field for backward compatibility
                 }
                 
-                // Handle status mapping
+                // Handle status mapping - strict mode: fail if no match found
+                $status_id = null;
                 if (isset($r['status']) && !empty($r['status'])) {
-                    $r['status_id'] = $statusMap[$r['status']] ?? $defaultStatus['id'];
+                    $statusName = strtolower(trim($r['status']));
+                    if (isset($statusMap[$statusName])) {
+                        $status_id = $statusMap[$statusName];
+                    } else {
+                        // If status is provided but no match found, throw error
+                        throw new Exception("Status '{$r['status']}' not found in system. Please check your CSV data.");
+                    }
                 } else {
-                    $r['status_id'] = $defaultStatus['id'];
+                    // Use default status only if no status provided
+                    $status_id = $defaultStatusId;
                 }
                 
-                $id = $this->create($r);
-                $leadIds[] = $id;
+                // Prepare data for batch insert
+                $insertData[] = [
+                    $lead_id,
+                    $r['name'] ?? null,
+                    $r['company'] ?? null,
+                    $r['email'] ?? null,
+                    $r['phone'] ?? null,
+                    $r['linkedin'] ?? null,
+                    $r['website'] ?? null,
+                    $r['clutch'] ?? null,
+                    $current_user_sdr_id,
+                    $duplicate_status,
+                    $r['notes'] ?? null,
+                    $created_by_user_id,
+                    $r['lead_owner'] ?? null,
+                    $r['contact_name'] ?? null,
+                    $r['job_title'] ?? null,
+                    $r['industry'] ?? null,
+                    $lead_source_id,
+                    $r['tier'] ?? null,
+                    $r['lead_status'] ?? null,
+                    $r['insta'] ?? null,
+                    $r['social_profile'] ?? null,
+                    $r['address'] ?? null,
+                    $r['description_information'] ?? null,
+                    $r['whatsapp'] ?? null,
+                    $r['next_step'] ?? null,
+                    $r['other'] ?? null,
+                    $status_id,
+                    $r['country'] ?? null,
+                    $r['sdr_name'] ?? null
+                ];
             }
+            
+            // Perform batch insert
+            if (!empty($insertData)) {
+                $placeholders = str_repeat('(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?),', count($insertData) - 1) . '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+                
+                $sql = "INSERT INTO leads (
+                    lead_id, name, company, email, phone, linkedin, website, clutch,
+                    sdr_id, duplicate_status, notes, created_by,
+                    lead_owner, contact_name, job_title, industry, lead_source_id,
+                    tier, lead_status, insta, social_profile, address, description_information,
+                    whatsapp, next_step, other, status_id, country, sdr_name
+                ) VALUES {$placeholders}";
+                
+                $stmt = $this->pdo->prepare($sql);
+                
+                // Flatten the array for execute
+                $flatData = [];
+                foreach ($insertData as $row) {
+                    $flatData = array_merge($flatData, $row);
+                }
+                
+                $stmt->execute($flatData);
+                
+                // Get inserted IDs
+                $firstId = $this->pdo->lastInsertId();
+                $insertedCount = count($insertData);
+                for ($i = 0; $i < $insertedCount; $i++) {
+                    $leadIds[] = $firstId + $i;
+                }
+            }
+            
             $this->pdo->commit();
+            return count($leadIds);
+            
         } catch(Exception $e){
             $this->pdo->rollBack();
             throw $e;
         }
-        return count($leadIds);
     }
 
     // Export all leads to CSV (returns CSV string)

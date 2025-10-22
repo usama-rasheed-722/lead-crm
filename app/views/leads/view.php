@@ -17,9 +17,13 @@
         <a href="index.php?action=lead_edit&id=<?= $lead['id'] ?>" class="btn btn-outline-primary me-2">
             <i class="fas fa-edit me-2"></i>Edit Lead
         </a>
+        <a href="index.php?action=lead_add" class="btn btn-outline-primary me-2">
+            <i class="fas fa-plus me-2"></i>Add Lead
+        </a>
         <a href="index.php?action=leads" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Leads
         </a>
+     
     </div>
 </div>
 
