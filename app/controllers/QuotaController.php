@@ -1,12 +1,14 @@
 <?php
 class QuotaController extends Controller {
     protected $quotaModel;
+    protected $quotaLogModel;
     protected $statusModel;
     protected $userModel;
     
     public function __construct() {
         parent::__construct();
         $this->quotaModel = new QuotaModel();
+        $this->quotaLogModel = new QuotaLogModel();
         $this->statusModel = new StatusModel();
         $this->userModel = new UserModel();
     }
@@ -177,6 +179,23 @@ class QuotaController extends Controller {
         
         header('Content-Type: application/json');
         echo json_encode(['quotas' => $quotas]);
+        exit;
+    }
+    
+    // Get quota summary for dashboard
+    public function getQuotaSummary() {
+        $user = auth_user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+        
+        $logDate = $_GET['date'] ?? date('Y-m-d');
+        $summary = $this->quotaLogModel->getQuotaSummary($user['id'], $logDate);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['summary' => $summary]);
         exit;
     }
 }

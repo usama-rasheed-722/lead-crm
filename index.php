@@ -215,6 +215,9 @@ switch ($action) {
     case 'get_user_quotas':
         (new QuotaController())->getUserQuotas();
         break;
+    case 'get_quota_summary':
+        (new QuotaController())->getQuotaSummary();
+        break;
     default:
         include __DIR__ . '/../views/errors/404.php';
         break;

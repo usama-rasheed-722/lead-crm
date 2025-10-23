@@ -180,32 +180,41 @@
         </div>
     </div>
 
-        <!-- User Quota Information -->
-        <?php if (isset($userQuotas) && !empty($userQuotas)): ?>
+        <!-- Enhanced Quota Overview -->
+        <?php if (isset($quotaSummary) && !empty($quotaSummary)): ?>
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>My Quota Status</h5>
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Quota Overview</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <?php foreach ($userQuotas as $quota): ?>
+                    <?php foreach ($quotaSummary as $quota): ?>
                         <div class="col-md-6 mb-3">
-                            <div class="card border-<?= $quota['usage_count'] >= $quota['quota_limit'] ? 'danger' : ($quota['usage_count'] >= ($quota['quota_limit'] * 0.9) ? 'warning' : 'success') ?>">
+                            <div class="card border-<?= $quota['quota_used'] >= $quota['total_available'] ? 'danger' : ($quota['quota_used'] >= ($quota['total_available'] * 0.9) ? 'warning' : 'success') ?>">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h6 class="card-title mb-0"><?= htmlspecialchars($quota['status_name']) ?></h6>
-                                        <span class="badge bg-<?= $quota['usage_count'] >= $quota['quota_limit'] ? 'danger' : ($quota['usage_count'] >= ($quota['quota_limit'] * 0.9) ? 'warning' : 'success') ?>">
-                                            <?= $quota['usage_count'] ?>/<?= $quota['quota_limit'] ?>
+                                        <span class="badge bg-<?= $quota['quota_used'] >= $quota['total_available'] ? 'danger' : ($quota['quota_used'] >= ($quota['total_available'] * 0.9) ? 'warning' : 'success') ?>">
+                                            <?= $quota['quota_used'] ?>/<?= $quota['total_available'] ?>
                                         </span>
                                     </div>
                                     <div class="progress mb-2">
-                                        <div class="progress-bar bg-<?= $quota['usage_percentage'] >= 100 ? 'danger' : ($quota['usage_percentage'] >= 90 ? 'warning' : 'success') ?>" 
-                                             style="width: <?= min(100, $quota['usage_percentage']) ?>%">
-                                            <?= $quota['usage_percentage'] ?>%
+                                        <?php
+                                        $percentage = $quota['total_available'] > 0 ? ($quota['quota_used'] / $quota['total_available']) * 100 : 0;
+                                        ?>
+                                        <div class="progress-bar bg-<?= $percentage >= 100 ? 'danger' : ($percentage >= 90 ? 'warning' : 'success') ?>" 
+                                             style="width: <?= min(100, $percentage) ?>%">
+                                            <?= round($percentage, 1) ?>%
                                         </div>
                                     </div>
                                     <small class="text-muted">
-                                        Remaining: <?= $quota['remaining'] ?> | Valid for <?= $quota['days_limit'] ?> days
+                                        <div>Remaining: <?= $quota['remaining'] ?></div>
+                                        <?php if ($quota['quota_carry_forward'] > 0): ?>
+                                            <div class="text-success">
+                                                <i class="fas fa-plus-circle me-1"></i>
+                                                Carry Forward: <?= $quota['quota_carry_forward'] ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </small>
                                 </div>
                             </div>

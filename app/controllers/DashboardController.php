@@ -5,6 +5,7 @@ class DashboardController extends Controller {
     protected $userModel;
     protected $noteModel;
     protected $quotaModel;
+    protected $quotaLogModel;
 
     public function __construct() {
         parent::__construct();
@@ -12,6 +13,7 @@ class DashboardController extends Controller {
         $this->userModel = new UserModel();
         $this->noteModel = new NoteModel();
         $this->quotaModel = new QuotaModel();
+        $this->quotaLogModel = new QuotaLogModel();
     }
 
     public function index() {
@@ -45,8 +47,10 @@ class DashboardController extends Controller {
         
         // User quota information
         $userQuotas = [];
+        $quotaSummary = [];
         if ($user['role'] === 'sdr') {
             $userQuotas = $this->quotaModel->getQuotaDetailsWithUsage($user['id']);
+            $quotaSummary = $this->quotaLogModel->getQuotaSummary($user['id']);
         }
         
         $this->view('dashboard/home', [
@@ -55,6 +59,7 @@ class DashboardController extends Controller {
             'recentActivity' => $recentActivity,
             'teamPerformance' => $teamPerformance,
             'userQuotas' => $userQuotas,
+            'quotaSummary' => $quotaSummary,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'users' => $this->userModel->getSDRs(),
