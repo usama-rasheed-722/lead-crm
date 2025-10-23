@@ -1,6 +1,6 @@
 <?php
 // app/models/UserModel.php
-class UserModel extends BaseModel {
+class UserModel extends Model {
     
     public function findByUsername($username) {
         $stmt = $this->pdo->prepare('SELECT * FROM users WHERE username = ?');

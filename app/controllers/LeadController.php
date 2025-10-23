@@ -525,10 +525,11 @@ class LeadController extends Controller {
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
                 if (!$lead || $lead['sdr_id'] != $userSdrId) {
-                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads'));
+                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
                 }
             }
         }
+        // Admins and managers can update any lead
         
         // Get custom fields for the new status
         $customFields = $statusModel->getCustomFieldsByName($newStatus['name']);
@@ -664,10 +665,11 @@ class LeadController extends Controller {
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
                 if (!$lead || $lead['sdr_id'] != $userSdrId) {
-                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads'));
+                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
                 }
             }
         }
+        // Admins and managers can update any lead
         
         // Get custom fields for the new status
         $customFields = $statusModel->getCustomFieldsByName($newStatus);
