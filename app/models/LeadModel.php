@@ -220,7 +220,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if(!empty($filters['date_from'])){ $where[]='l.created_at >= ?'; $params[] = $filters['date_from']; }
         if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
 
-        $sql = 'SELECT COUNT(*) as cnt FROM leads l';
+        $sql = 'SELECT COUNT(*) as cnt FROM leads l LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id';
         if($where) $sql .= ' WHERE '.implode(' AND ',$where);
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
