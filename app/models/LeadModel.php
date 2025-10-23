@@ -637,6 +637,16 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 $this->delete($dupId);
             }
             
+            // Check if primary lead has 'duplicate' tag and if no duplicates remain
+            if ($primaryLead['duplicate_status'] === 'duplicate') {
+                $remainingDuplicates = $this->findDuplicates($primaryId);
+                if (empty($remainingDuplicates)) {
+                    // No duplicates remain, remove the duplicate tag
+                    $stmt = $this->pdo->prepare("UPDATE leads SET duplicate_status = 'unique' WHERE id = ?");
+                    $stmt->execute([$primaryId]);
+                }
+            }
+            
             $this->pdo->commit();
             return true;
             
@@ -852,6 +862,44 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 $historySql = "INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by, custom_fields_data) VALUES " . implode(', ', $historyPlaceholders);
                 $historyStmt = $this->pdo->prepare($historySql);
                 $historyStmt->execute($historyParams);
+            }
+            
+            $this->pdo->commit();
+            return true;
+            
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    // Bulk update tier and lead_status
+    public function bulkUpdateTierAndStatus($leadIds, $tier = '', $leadStatus = '') {
+        try {
+            $this->pdo->beginTransaction();
+            
+            $updateFields = [];
+            $params = [];
+            
+            if (!empty($tier)) {
+                $updateFields[] = 'tier = ?';
+                $params[] = $tier;
+            }
+            
+            if (!empty($leadStatus)) {
+                $updateFields[] = 'lead_status = ?';
+                $params[] = $leadStatus;
+            }
+            
+            if (!empty($updateFields)) {
+                $updateFields[] = 'updated_at = NOW()';
+                $params = array_merge($params, $leadIds);
+                
+                $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
+                $sql = "UPDATE leads SET " . implode(', ', $updateFields) . " WHERE id IN ($placeholders)";
+                
+                $stmt = $this->pdo->prepare($sql);
+                $stmt->execute($params);
             }
             
             $this->pdo->commit();

@@ -3,7 +3,7 @@ class StatusModel extends Model {
 
     // Get all statuses
     public function all() {
-        $stmt = $this->pdo->prepare('SELECT * FROM status ORDER BY name ASC');
+        $stmt = $this->pdo->prepare('SELECT * FROM status ORDER BY sequence ASC, name ASC');
         $stmt->execute();
         return $stmt->fetchAll();
     }
@@ -171,6 +171,28 @@ class StatusModel extends Model {
         $stmt->execute([$statusName]);
         $result = $stmt->fetch();
         return $result ? (bool)$result['restrict_bulk_update'] : false;
+    }
+
+    // Update sequence for a status
+    public function updateSequence($id, $sequence) {
+        $stmt = $this->pdo->prepare('UPDATE status SET sequence = ? WHERE id = ?');
+        return $stmt->execute([$sequence, $id]);
+    }
+
+    // Bulk update sequences
+    public function updateSequences($sequences) {
+        $this->pdo->beginTransaction();
+        try {
+            foreach ($sequences as $id => $sequence) {
+                $stmt = $this->pdo->prepare('UPDATE status SET sequence = ? WHERE id = ?');
+                $stmt->execute([$sequence, $id]);
+            }
+            $this->pdo->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
     }
 }
 ?>

@@ -133,6 +133,12 @@
                     <i class="fas fa-trash me-1"></i>Delete Selected
                 </button>
             <?php endif; ?>
+            <button type="button" class="btn btn-sm btn-outline-warning me-2" id="clearSelectionBtn" disabled>
+                <i class="fas fa-times me-1"></i>Clear Selection
+            </button>
+            <span class="badge bg-info me-2" id="selectionBadge" style="display: none;">
+                <i class="fas fa-check-square me-1"></i>Selected: <span id="selectionCount">0</span> leads
+            </span>
             <a href="index.php?action=export_csv&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
@@ -357,24 +363,54 @@
             </div>
             <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="new_status_id" class="form-label">New Status</label>
-                        <select class="form-select" id="new_status_id" name="new_status_id" required>
-                            <option value="">Select Status</option>
-                            <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
-                                <?php
-                                $statusModel = new StatusModel();
-                                $customFields = $statusModel->getCustomFieldsByName($st['name']);
-                                $hasFields = count($customFields) > 0;
-                                ?>
-                                <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
-                                    <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
-                                </option>
-                            <?php endforeach; endif; ?>
-                        </select>
-                        <div class="form-text">
-                            <i class="fas fa-info-circle text-info me-1"></i>
-                            <span class="text-muted">📝 indicates statuses that require additional information</span>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="new_status_id" class="form-label">New Status</label>
+                                <select class="form-select" id="new_status_id" name="new_status_id" required>
+                                    <option value="">Select Status</option>
+                                    <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
+                                        <?php
+                                        $statusModel = new StatusModel();
+                                        $customFields = $statusModel->getCustomFieldsByName($st['name']);
+                                        $hasFields = count($customFields) > 0;
+                                        ?>
+                                        <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                            <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
+                                        </option>
+                                    <?php endforeach; endif; ?>
+                                </select>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle text-info me-1"></i>
+                                    <span class="text-muted">📝 indicates statuses that require additional information</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bulk_tier" class="form-label">Tier (Optional)</label>
+                                <select class="form-select" id="bulk_tier" name="bulk_tier">
+                                    <option value="">No Change</option>
+                                    <option value="A-Tier">A-Tier</option>
+                                    <option value="B-Tier">B-Tier</option>
+                                    <option value="C-Tier">C-Tier</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bulk_lead_status" class="form-label">Lead Status (Optional)</label>
+                                <select class="form-select" id="bulk_lead_status" name="bulk_lead_status">
+                                    <option value="">No Change</option>
+                                    <option value="New Lead">New Lead</option>
+                                    <option value="Warm Lead">Warm Lead</option>
+                                    <option value="Cold Lead">Cold Lead</option>
+                                    <option value="Hot Lead">Hot Lead</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
@@ -441,6 +477,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const bulkUpdateModal = document.getElementById('bulkUpdateModal') ? new bootstrap.Modal(document.getElementById('bulkUpdateModal')) : null;
     const bulkUpdateIds = document.getElementById('bulkUpdateIds');
     const selectedCountSpan = document.getElementById('selectedCount');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const selectionBadge = document.getElementById('selectionBadge');
+    const selectionCount = document.getElementById('selectionCount');
     const columnsBtn = document.getElementById('columnsBtn');
 
     // Cookie helpers
@@ -505,7 +544,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const count = selectedSet.size;
         if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
         if (bulkUpdateBtn) bulkUpdateBtn.disabled = count === 0;
+        if (clearSelectionBtn) clearSelectionBtn.disabled = count === 0;
         if (selectedCountSpan) selectedCountSpan.textContent = count;
+        if (selectionCount) selectionCount.textContent = count;
+        if (selectionBadge) {
+            selectionBadge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
     }
 
     function updateSelectAllState() {
@@ -523,6 +567,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectAllCheckbox.indeterminate = true;
             }
         }
+    }
+
+    // Clear selection functionality
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', function() {
+            selectedSet.clear();
+            saveSelectedSet(selectedSet);
+            
+            // Uncheck all checkboxes on current page
+            leadCheckboxes.forEach(cb => cb.checked = false);
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            
+            updateBulkButtons();
+            updateSelectAllState();
+        });
     }
 
     // Bulk delete functionality
@@ -612,6 +671,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!confirm(`Are you sure you want to update the status to "${newStatusName}" for ${count} selected lead(s)?`)) {
                 e.preventDefault();
+            } else {
+                // Clear selections after successful submission
+                setTimeout(() => {
+                    selectedSet.clear();
+                    saveSelectedSet(selectedSet);
+                    leadCheckboxes.forEach(cb => cb.checked = false);
+                    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                    updateBulkButtons();
+                    updateSelectAllState();
+                }, 1000);
             }
         });
     }

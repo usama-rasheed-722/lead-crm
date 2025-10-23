@@ -32,6 +32,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Sequence</th>
                             <th>Name</th>
                             <th>Type</th>
                             <th>Created At</th>
@@ -42,6 +43,16 @@
                         <?php foreach ($statuses as $status): ?>
                             <tr>
                                 <td><?= $status['id'] ?></td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="width: 80px;">
+                                        <input type="number" 
+                                               class="form-control sequence-input" 
+                                               value="<?= $status['sequence'] ?>" 
+                                               data-status-id="<?= $status['id'] ?>"
+                                               min="0"
+                                               style="text-align: center;">
+                                    </div>
+                                </td>
                                 <td>
                                     <span class="badge bg-secondary">
                                         <?= htmlspecialchars($status['name']) ?>
@@ -136,6 +147,53 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Error: Failed to set status as default');
                     });
             }
+        });
+    });
+
+    // Sequence update functionality
+    document.querySelectorAll('.sequence-input').forEach(input => {
+        let timeoutId;
+        
+        input.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const statusId = this.dataset.statusId;
+                const sequence = this.value;
+                
+                if (sequence !== this.defaultValue) {
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('sequence', sequence);
+                    
+                    fetch(`index.php?action=update_status_sequence&id=${statusId}`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            this.defaultValue = sequence;
+                            // Show success indicator
+                            this.style.borderColor = '#28a745';
+                            setTimeout(() => {
+                                this.style.borderColor = '';
+                            }, 1000);
+                        } else {
+                            // Show error indicator
+                            this.style.borderColor = '#dc3545';
+                            setTimeout(() => {
+                                this.style.borderColor = '';
+                            }, 2000);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.style.borderColor = '#dc3545';
+                        setTimeout(() => {
+                            this.style.borderColor = '';
+                        }, 2000);
+                    });
+                }
+            }, 500); // 500ms delay to avoid too many requests
         });
     });
 });

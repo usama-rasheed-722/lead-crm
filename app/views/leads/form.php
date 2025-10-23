@@ -149,15 +149,24 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label for="tier" class="form-label">Tier</label>
-                            <input type="text" class="form-control" id="tier" name="tier" 
-                                   value="<?= htmlspecialchars($lead['tier'] ?? '') ?>">
+                            <select class="form-select" id="tier" name="tier">
+                                <option value="">Select Tier</option>
+                                <option value="A-Tier" <?= ($lead['tier'] ?? '') == 'A-Tier' ? 'selected' : '' ?>>A-Tier</option>
+                                <option value="B-Tier" <?= ($lead['tier'] ?? '') == 'B-Tier' ? 'selected' : '' ?>>B-Tier</option>
+                                <option value="C-Tier" <?= ($lead['tier'] ?? '') == 'C-Tier' ? 'selected' : '' ?>>C-Tier</option>
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="mb-3">
                             <label for="lead_status" class="form-label">Lead Status</label>
-                            <input type="text" class="form-control" id="lead_status" name="lead_status" 
-                                   value="<?= htmlspecialchars($lead['lead_status'] ?? '') ?>">
+                            <select class="form-select" id="lead_status" name="lead_status">
+                                <option value="">Select Lead Status</option>
+                                <option value="New Lead" <?= ($lead['lead_status'] ?? '') == 'New Lead' ? 'selected' : '' ?>>New Lead</option>
+                                <option value="Warm Lead" <?= ($lead['lead_status'] ?? '') == 'Warm Lead' ? 'selected' : '' ?>>Warm Lead</option>
+                                <option value="Cold Lead" <?= ($lead['lead_status'] ?? '') == 'Cold Lead' ? 'selected' : '' ?>>Cold Lead</option>
+                                <option value="Hot Lead" <?= ($lead['lead_status'] ?? '') == 'Hot Lead' ? 'selected' : '' ?>>Hot Lead</option>
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-4">

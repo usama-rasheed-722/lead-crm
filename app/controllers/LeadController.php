@@ -551,6 +551,15 @@ class LeadController extends Controller {
         try {
             // Use the new bulk update method with single transaction and single query
             $this->leadModel->bulkUpdateStatusWithCustomFields($ids, $newStatusId, $user['id'], $customFieldsData);
+            
+            // Also update tier and lead_status if provided
+            $tier = $_POST['bulk_tier'] ?? '';
+            $leadStatus = $_POST['bulk_lead_status'] ?? '';
+            
+            if (!empty($tier) || !empty($leadStatus)) {
+                $this->leadModel->bulkUpdateTierAndStatus($ids, $tier, $leadStatus);
+            }
+            
             $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));

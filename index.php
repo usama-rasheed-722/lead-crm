@@ -125,6 +125,12 @@ switch ($action) {
     case 'set_status_as_default':
         (new StatusController())->setAsDefault($_GET['id'] ?? null);
         break;
+    case 'update_status_sequence':
+        (new StatusController())->updateSequence($_GET['id'] ?? null);
+        break;
+    case 'update_status_sequences':
+        (new StatusController())->updateSequences();
+        break;
     case 'lead_sources':
         (new LeadSourceController())->index();
         break;

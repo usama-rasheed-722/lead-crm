@@ -283,5 +283,45 @@ class StatusController extends Controller {
         }
         exit;
     }
+
+    // Update sequence for a status
+    public function updateSequence($id) {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$id) {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $sequence = (int)($_POST['sequence'] ?? 0);
+        
+        try {
+            $this->statusModel->updateSequence($id, $sequence);
+            $this->redirect('index.php?action=status_management&success=' . urlencode('Status sequence updated successfully'));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=status_management&error=' . urlencode('Failed to update sequence: ' . $e->getMessage()));
+        }
+    }
+
+    // Bulk update sequences
+    public function updateSequences() {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=status_management');
+        }
+        
+        $sequences = $_POST['sequences'] ?? [];
+        
+        if (empty($sequences)) {
+            $this->redirect('index.php?action=status_management&error=' . urlencode('No sequences provided'));
+        }
+        
+        try {
+            $this->statusModel->updateSequences($sequences);
+            $this->redirect('index.php?action=status_management&success=' . urlencode('Status sequences updated successfully'));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=status_management&error=' . urlencode('Failed to update sequences: ' . $e->getMessage()));
+        }
+    }
 }
 ?>
