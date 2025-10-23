@@ -77,6 +77,10 @@
                                            class="btn btn-outline-primary" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <a href="index.php?action=manage_user_quotas&id=<?= $user['id'] ?>" 
+                                           class="btn btn-outline-info" title="Manage Quotas">
+                                            <i class="fas fa-chart-line"></i>
+                                        </a>
                                         <a href="index.php?action=user_delete&id=<?= $user['id'] ?>" 
                                            class="btn btn-outline-danger btn-delete" title="Delete">
                                             <i class="fas fa-trash"></i>

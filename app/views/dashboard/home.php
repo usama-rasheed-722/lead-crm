@@ -177,8 +177,44 @@
                         </a>
                     <?php endif; ?>
                 </div>
+        </div>
+    </div>
+
+        <!-- User Quota Information -->
+        <?php if (isset($userQuotas) && !empty($userQuotas)): ?>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>My Quota Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <?php foreach ($userQuotas as $quota): ?>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-<?= $quota['usage_count'] >= $quota['quota_limit'] ? 'danger' : ($quota['usage_count'] >= ($quota['quota_limit'] * 0.9) ? 'warning' : 'success') ?>">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="card-title mb-0"><?= htmlspecialchars($quota['status_name']) ?></h6>
+                                        <span class="badge bg-<?= $quota['usage_count'] >= $quota['quota_limit'] ? 'danger' : ($quota['usage_count'] >= ($quota['quota_limit'] * 0.9) ? 'warning' : 'success') ?>">
+                                            <?= $quota['usage_count'] ?>/<?= $quota['quota_limit'] ?>
+                                        </span>
+                                    </div>
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar bg-<?= $quota['usage_percentage'] >= 100 ? 'danger' : ($quota['usage_percentage'] >= 90 ? 'warning' : 'success') ?>" 
+                                             style="width: <?= min(100, $quota['usage_percentage']) ?>%">
+                                            <?= $quota['usage_percentage'] ?>%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">
+                                        Remaining: <?= $quota['remaining'] ?> | Valid for <?= $quota['days_limit'] ?> days
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Recent Activity -->
         <?php if (!empty($recentActivity)): ?>

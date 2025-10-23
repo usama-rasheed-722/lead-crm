@@ -4,12 +4,14 @@ class DashboardController extends Controller {
     protected $leadModel;
     protected $userModel;
     protected $noteModel;
+    protected $quotaModel;
 
     public function __construct() {
         parent::__construct();
         $this->leadModel = new LeadModel();
         $this->userModel = new UserModel();
         $this->noteModel = new NoteModel();
+        $this->quotaModel = new QuotaModel();
     }
 
     public function index() {
@@ -41,11 +43,18 @@ class DashboardController extends Controller {
             $teamPerformance = $this->getTeamPerformance($dateFrom, $dateTo);
         }
         
+        // User quota information
+        $userQuotas = [];
+        if ($user['role'] === 'sdr') {
+            $userQuotas = $this->quotaModel->getQuotaDetailsWithUsage($user['id']);
+        }
+        
         $this->view('dashboard/home', [
             'summary' => $summary,
             'recentLeads' => $recentLeads,
             'recentActivity' => $recentActivity,
             'teamPerformance' => $teamPerformance,
+            'userQuotas' => $userQuotas,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'users' => $this->userModel->getSDRs(),

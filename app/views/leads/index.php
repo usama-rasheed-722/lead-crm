@@ -363,54 +363,24 @@
             </div>
             <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="new_status_id" class="form-label">New Status</label>
-                                <select class="form-select" id="new_status_id" name="new_status_id" required>
-                                    <option value="">Select Status</option>
-                                    <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
-                                        <?php
-                                        $statusModel = new StatusModel();
-                                        $customFields = $statusModel->getCustomFieldsByName($st['name']);
-                                        $hasFields = count($customFields) > 0;
-                                        ?>
-                                        <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
-                                            <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
-                                        </option>
-                                    <?php endforeach; endif; ?>
-                                </select>
-                                <div class="form-text">
-                                    <i class="fas fa-info-circle text-info me-1"></i>
-                                    <span class="text-muted">📝 indicates statuses that require additional information</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="bulk_tier" class="form-label">Tier (Optional)</label>
-                                <select class="form-select" id="bulk_tier" name="bulk_tier">
-                                    <option value="">No Change</option>
-                                    <option value="A-Tier">A-Tier</option>
-                                    <option value="B-Tier">B-Tier</option>
-                                    <option value="C-Tier">C-Tier</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="bulk_lead_status" class="form-label">Lead Status (Optional)</label>
-                                <select class="form-select" id="bulk_lead_status" name="bulk_lead_status">
-                                    <option value="">No Change</option>
-                                    <option value="New Lead">New Lead</option>
-                                    <option value="Warm Lead">Warm Lead</option>
-                                    <option value="Cold Lead">Cold Lead</option>
-                                    <option value="Hot Lead">Hot Lead</option>
-                                </select>
-                            </div>
+                    <div class="mb-3">
+                        <label for="new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="new_status_id" name="new_status_id" required>
+                            <option value="">Select Status</option>
+                            <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
+                                <?php
+                                $statusModel = new StatusModel();
+                                $customFields = $statusModel->getCustomFieldsByName($st['name']);
+                                $hasFields = count($customFields) > 0;
+                                ?>
+                                <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                    <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
+                                </option>
+                            <?php endforeach; endif; ?>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <span class="text-muted">📝 indicates statuses that require additional information</span>
                         </div>
                     </div>
                     

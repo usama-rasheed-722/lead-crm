@@ -57,8 +57,7 @@ class LeadModel extends Model {
         $defaultStatus = $statusModel->getDefaultStatus();
         if ($data['status_id'] && $data['status_id'] !== $defaultStatus['id']) {
             $customFieldsData = $data['custom_fields_data'] ?? null;
-            $statusName = $statusModel->getById($data['status_id'])['name'] ?? null;
-            $this->logStatusChange($leadId, null, $statusName, $data['created_by'], $customFieldsData);
+            $this->logStatusChange($leadId, null, $data['status_id'], $data['created_by'], $customFieldsData);
         }
 
         return $leadId;
@@ -110,10 +109,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if ($result && $oldStatusId !== $newStatusId && !empty($newStatusId)) {
             $changedBy = $data['changed_by'] ?? $currentLead['created_by'];
             $customFieldsData = $data['custom_fields_data'] ?? null;
-            $statusModel = new StatusModel();
-            $oldStatusName = $oldStatusId ? $statusModel->getById($oldStatusId)['name'] ?? null : null;
-            $newStatusName = $statusModel->getById($newStatusId)['name'] ?? null;
-            $this->logStatusChange($id, $oldStatusName, $newStatusName, $changedBy, $customFieldsData);
+            $this->logStatusChange($id, $oldStatusId, $newStatusId, $changedBy, $customFieldsData);
         }
         
         return $result;
@@ -780,7 +776,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             
             // Log status change with custom fields data
             if ($oldStatusId != $newStatusId) {
-                $this->logStatusChange($leadId, $oldStatusName, $newStatusName, $changedBy, $customFieldsData);
+                $this->logStatusChange($leadId, $oldStatusId, $newStatusId, $changedBy, $customFieldsData);
             }
             
             $this->pdo->commit();
@@ -826,7 +822,9 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                     $statusHistoryData[] = [
                         'lead_id' => $lead['id'],
                         'old_status' => $oldStatusName,
+                        'old_status_id' => $oldStatusId,
                         'new_status' => $newStatusName,
+                        'new_status_id' => $newStatusId,
                         'changed_by' => $changedBy,
                         'custom_fields_data' => $customFieldsJson
                     ];
@@ -851,15 +849,17 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 
                 foreach ($statusHistoryData as $data) {
                     $uniqueId = uniqid(); // Generate unique placeholder IDs
-                    $historyPlaceholders[] = "(:lead_id_$uniqueId, :old_status_$uniqueId, :new_status_$uniqueId, :changed_by_$uniqueId, :custom_fields_data_$uniqueId)";
+                    $historyPlaceholders[] = "(:lead_id_$uniqueId, :old_status_$uniqueId, :old_status_id_$uniqueId, :new_status_$uniqueId, :new_status_id_$uniqueId, :changed_by_$uniqueId, :custom_fields_data_$uniqueId)";
                     $historyParams[":lead_id_$uniqueId"] = $data['lead_id'];
                     $historyParams[":old_status_$uniqueId"] = $data['old_status'];
+                    $historyParams[":old_status_id_$uniqueId"] = $data['old_status_id'];
                     $historyParams[":new_status_$uniqueId"] = $data['new_status'];
+                    $historyParams[":new_status_id_$uniqueId"] = $data['new_status_id'];
                     $historyParams[":changed_by_$uniqueId"] = $data['changed_by'];
                     $historyParams[":custom_fields_data_$uniqueId"] = $data['custom_fields_data'];
                 }
                 
-                $historySql = "INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by, custom_fields_data) VALUES " . implode(', ', $historyPlaceholders);
+                $historySql = "INSERT INTO contact_status_history (lead_id, old_status, old_status_id, new_status, new_status_id, changed_by, custom_fields_data) VALUES " . implode(', ', $historyPlaceholders);
                 $historyStmt = $this->pdo->prepare($historySql);
                 $historyStmt->execute($historyParams);
             }
@@ -873,52 +873,20 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         }
     }
 
-    // Bulk update tier and lead_status
-    public function bulkUpdateTierAndStatus($leadIds, $tier = '', $leadStatus = '') {
-        try {
-            $this->pdo->beginTransaction();
-            
-            $updateFields = [];
-            $params = [];
-            
-            if (!empty($tier)) {
-                $updateFields[] = 'tier = ?';
-                $params[] = $tier;
-            }
-            
-            if (!empty($leadStatus)) {
-                $updateFields[] = 'lead_status = ?';
-                $params[] = $leadStatus;
-            }
-            
-            if (!empty($updateFields)) {
-                $updateFields[] = 'updated_at = NOW()';
-                $params = array_merge($params, $leadIds);
-                
-                $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
-                $sql = "UPDATE leads SET " . implode(', ', $updateFields) . " WHERE id IN ($placeholders)";
-                
-                $stmt = $this->pdo->prepare($sql);
-                $stmt->execute($params);
-            }
-            
-            $this->pdo->commit();
-            return true;
-            
-        } catch (Exception $e) {
-            $this->pdo->rollBack();
-            throw $e;
-        }
-    }
 
     // Log status change
-    private function logStatusChange($leadId, $oldStatus, $newStatus, $changedBy, $customFieldsData = null) {
+    private function logStatusChange($leadId, $oldStatusId, $newStatusId, $changedBy, $customFieldsData = null) {
+        // Get status names for backward compatibility
+        $statusModel = new StatusModel();
+        $oldStatusName = $oldStatusId ? $statusModel->getById($oldStatusId)['name'] ?? null : null;
+        $newStatusName = $newStatusId ? $statusModel->getById($newStatusId)['name'] ?? null : null;
+        
         $stmt = $this->pdo->prepare('
-            INSERT INTO contact_status_history (lead_id, old_status, new_status, changed_by, custom_fields_data) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO contact_status_history (lead_id, old_status, old_status_id, new_status, new_status_id, changed_by, custom_fields_data) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ');
         $customFieldsJson = $customFieldsData ? json_encode($customFieldsData) : null;
-        return $stmt->execute([$leadId, $oldStatus, $newStatus, $changedBy, $customFieldsJson]);
+        return $stmt->execute([$leadId, $oldStatusName, $oldStatusId, $newStatusName, $newStatusId, $changedBy, $customFieldsJson]);
     }
 
     // Get leads with specific columns for the new leads page

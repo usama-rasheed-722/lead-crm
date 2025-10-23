@@ -200,17 +200,18 @@
                     
                     <div class="mb-3">
                         <label for="quick_new_status" class="form-label">New Status</label>
-                        <select class="form-select" id="quick_new_status" name="new_status" required>
+                        <select class="form-select" id="quick_new_status" name="new_status_id" required>
                             <option value="">Select Status</option>
                             <?php
                             $statusModel = new StatusModel();
                             $statuses = $statusModel->all();
                             foreach ($statuses as $status):
-                                if ($status['name'] !== $lead['status']):
+                                // Skip current status
+                                if ($status['name'] !== $lead['status_name']):
                                     $customFields = $statusModel->getCustomFieldsByName($status['name']);
                                     $hasFields = count($customFields) > 0;
                             ?>
-                                <option value="<?= htmlspecialchars($status['name']) ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                <option value="<?= $status['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
                                     <?= htmlspecialchars($status['name']) ?><?= $hasFields ? ' 📝' : '' ?>
                                 </option>
                             <?php
@@ -229,7 +230,7 @@
                     
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        Current status: <strong><?= htmlspecialchars($lead['status'] ?: 'New Lead') ?></strong>
+                        Current status: <strong><?= htmlspecialchars($lead['status_name'] ?: 'New Lead') ?></strong>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -328,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 quickCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatus)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatus}`)
                     .then(response => response.json())
                     .then(data => {
                         quickCustomFieldsContainer.innerHTML = '';

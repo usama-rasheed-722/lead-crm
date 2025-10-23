@@ -86,6 +86,12 @@
                                 <i class="fas fa-source me-2"></i>Lead Sources
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'quota_management' ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=quota_management') ?>">
+                                <i class="fas fa-chart-line me-2"></i>Quota Management
+                            </a>
+                        </li>
                         <?php endif; ?>
                     </ul>
                 </div>

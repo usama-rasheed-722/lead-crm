@@ -551,15 +551,6 @@ class LeadController extends Controller {
         try {
             // Use the new bulk update method with single transaction and single query
             $this->leadModel->bulkUpdateStatusWithCustomFields($ids, $newStatusId, $user['id'], $customFieldsData);
-            
-            // Also update tier and lead_status if provided
-            $tier = $_POST['bulk_tier'] ?? '';
-            $leadStatus = $_POST['bulk_lead_status'] ?? '';
-            
-            if (!empty($tier) || !empty($leadStatus)) {
-                $this->leadModel->bulkUpdateTierAndStatus($ids, $tier, $leadStatus);
-            }
-            
             $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
@@ -611,24 +602,32 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->updateStatusWithCustomFields($leadId, $newStatusId, $user['id'], $customFieldsData);
-            $this->redirect("index.php?action=lead_view&id={$leadId}&success=" . urlencode('Status updated successfully'));
+            $this->redirect("index.php?action=lead_status_history&id={$leadId}&success=" . urlencode('Status updated successfully'));
         } catch (Exception $e) {
-            $this->redirect("index.php?action=lead_view&id={$leadId}&error=" . urlencode('Failed to update status: ' . $e->getMessage()));
+            $this->redirect("index.php?action=lead_status_history&id={$leadId}&error=" . urlencode('Failed to update status: ' . $e->getMessage()));
         }
     }
 
     // Get custom fields for a status (AJAX endpoint)
     public function getCustomFieldsForStatus() {
-        $statusName = $_GET['status'] ?? '';
+        $statusId = $_GET['status_id'] ?? '';
         
-        if (empty($statusName)) {
+        if (empty($statusId)) {
             http_response_code(400);
-            echo json_encode(['error' => 'Status name required']);
+            echo json_encode(['error' => 'Status ID required']);
             exit;
         }
         
         $statusModel = new StatusModel();
-        $customFields = $statusModel->getCustomFieldsByName($statusName);
+        $status = $statusModel->getById($statusId);
+        
+        if (!$status) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Status not found']);
+            exit;
+        }
+        
+        $customFields = $statusModel->getCustomFieldsByName($status['name']);
         
         header('Content-Type: application/json');
         echo json_encode(['customFields' => $customFields]);

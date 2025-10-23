@@ -191,6 +191,30 @@ switch ($action) {
     case 'user_delete':
         (new UserController())->delete($_GET['id'] ?? null);
         break;
+    case 'quota_management':
+        (new QuotaController())->index();
+        break;
+    case 'manage_user_quotas':
+        (new QuotaController())->manageUserQuotas($_GET['id'] ?? null);
+        break;
+    case 'quota_store':
+        (new QuotaController())->store();
+        break;
+    case 'quota_update':
+        (new QuotaController())->update($_GET['id'] ?? null);
+        break;
+    case 'quota_delete':
+        (new QuotaController())->delete($_GET['id'] ?? null);
+        break;
+    case 'get_quota_usage':
+        (new QuotaController())->getQuotaUsage();
+        break;
+    case 'get_quota_status':
+        (new QuotaController())->getQuotaStatus();
+        break;
+    case 'get_user_quotas':
+        (new QuotaController())->getUserQuotas();
+        break;
     default:
         include __DIR__ . '/../views/errors/404.php';
         break;
