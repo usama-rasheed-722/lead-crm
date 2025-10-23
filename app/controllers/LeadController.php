@@ -93,8 +93,7 @@ class LeadController extends Controller {
         $notes = $noteModel->getByLeadId($id);
 
         // Get status history
-        $historyModel = new ContactStatusHistoryModel();
-        $statusHistory = $historyModel->getByLeadId($id);
+        $statusHistory = $this->leadModel->getStatusHistory($id);
         
         $this->view('leads/view', [
             'lead' => $lead,

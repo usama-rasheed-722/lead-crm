@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (newStatusSelect) {
         newStatusSelect.addEventListener('change', function() {
-            const selectedStatus = this.value;
+            const selectedStatusId = this.value;
             const selectedOption = this.options[this.selectedIndex];
             const hasFields = selectedOption.dataset.hasFields === 'true';
             
@@ -565,14 +565,14 @@ document.addEventListener('DOMContentLoaded', function() {
             bulkCustomFieldsContainer.innerHTML = '';
             
             // Update status information
-            updateStatusInfo(selectedStatus, hasFields);
+            updateStatusInfo(selectedStatusId, hasFields);
             
-            if (selectedStatus) {
+            if (selectedStatusId) {
                 // Show loading indicator
                 bulkCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatus)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
                     .then(response => response.json())
                     .then(data => {
                         bulkCustomFieldsContainer.innerHTML = '';

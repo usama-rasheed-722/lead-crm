@@ -349,7 +349,7 @@
                                     <td><?= date('Y-m-d H:i', strtotime($h['changed_at'])) ?></td>
                                     <td><?= htmlspecialchars($h['old_status'] ?: '—') ?></td>
                                     <td>
-                                        <span class="badge bg-secondary"><?= htmlspecialchars($h['new_status']) ?></span>
+                                        <span class="badge bg-secondary"><?= htmlspecialchars($h['new_status'] ?: 'Unknown') ?></span>
                                         <?php if (!empty($h['custom_fields_data'])): ?>
                                             <?php 
                                             $customData = json_decode($h['custom_fields_data'], true);
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 customFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
                     .then(response => response.json())
                     .then(data => {
                         customFieldsContainer.innerHTML = '';
@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 quickCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
                     .then(response => response.json())
                     .then(data => {
                         quickCustomFieldsContainer.innerHTML = '';

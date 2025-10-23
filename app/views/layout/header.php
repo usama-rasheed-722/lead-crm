@@ -61,6 +61,14 @@
                                 <i class="fas fa-users me-2"></i>All Leads
                             </a>
                         </li>
+                        <?php if (auth_user()['role'] === 'sdr'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'leads_quota_sdr_view' ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=leads_quota_sdr_view') ?>">
+                                <i class="fas fa-tasks me-2"></i>My Assigned Leads
+                            </a>
+                        </li>
+                        <?php endif; ?>
                         <li class="nav-item">
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'import' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=import') ?>">
@@ -90,6 +98,12 @@
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'quota_management' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=quota_management') ?>">
                                 <i class="fas fa-chart-line me-2"></i>Quota Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= in_array($_GET['action'] ?? '', ['leads_quota_assign', 'leads_quota_manage']) ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=leads_quota_manage') ?>">
+                                <i class="fas fa-tasks me-2"></i>Leads Quota
                             </a>
                         </li>
                         <?php endif; ?>

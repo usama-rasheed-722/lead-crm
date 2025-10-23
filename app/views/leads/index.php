@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bulkCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
                 
                 // Fetch custom fields for the selected status
-                fetch(`index.php?action=get_custom_fields_for_status&status=${encodeURIComponent(selectedStatusName)}`)
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
                     .then(response => response.json())
                     .then(data => {
                         bulkCustomFieldsContainer.innerHTML = '';

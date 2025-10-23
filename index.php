@@ -218,6 +218,29 @@ switch ($action) {
     case 'get_quota_summary':
         (new QuotaController())->getQuotaSummary();
         break;
+    
+    // Leads Quota Management
+    case 'leads_quota_assign':
+        (new LeadsQuotaController())->assign();
+        break;
+    case 'leads_quota_store':
+        (new LeadsQuotaController())->store();
+        break;
+    case 'leads_quota_manage':
+        (new LeadsQuotaController())->manage();
+        break;
+    case 'leads_quota_sdr_view':
+        (new LeadsQuotaController())->sdrView();
+        break;
+    case 'leads_quota_mark_completed':
+        (new LeadsQuotaController())->markCompleted();
+        break;
+    case 'leads_quota_mark_not_completed':
+        (new LeadsQuotaController())->markNotCompleted();
+        break;
+    case 'leads_quota_delete':
+        (new LeadsQuotaController())->delete();
+        break;
     default:
         include __DIR__ . '/../views/errors/404.php';
         break;
