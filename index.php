@@ -262,6 +262,39 @@ switch ($action) {
     case 'export_quota_report':
         (new LeadsQuotaController())->exportQuotaReport();
         break;
+    
+    // Lead Assignment Management
+    case 'assigned_leads':
+        (new LeadAssignmentController())->assignedLeads();
+        break;
+    case 'assign_lead':
+        (new LeadAssignmentController())->assignLead();
+        break;
+    case 'bulk_assign_leads':
+        (new LeadAssignmentController())->bulkAssignLeads();
+        break;
+    case 'unassign_lead':
+        (new LeadAssignmentController())->unassignLead();
+        break;
+    case 'bulk_unassign_leads':
+        (new LeadAssignmentController())->bulkUnassignLeads();
+        break;
+    case 'get_assignment_history':
+        (new LeadAssignmentController())->getAssignmentHistory();
+        break;
+    case 'get_current_assignment':
+        (new LeadAssignmentController())->getCurrentAssignment();
+        break;
+    case 'get_users_for_assignment':
+        (new LeadAssignmentController())->getUsersForAssignment();
+        break;
+    case 'get_assignment_stats':
+        (new LeadAssignmentController())->getAssignmentStats();
+        break;
+    case 'export_assigned_leads':
+        (new LeadAssignmentController())->exportAssignedLeads();
+        break;
+    
     default:
         include __DIR__ . '/app/views/errors/404.php';
         break;

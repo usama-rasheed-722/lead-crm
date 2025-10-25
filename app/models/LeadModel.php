@@ -984,4 +984,155 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         $stmt->execute([$leadId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Get lead with assignment information
+     * @param int $leadId Lead ID
+     * @return array Lead data with assignment info
+     */
+    public function getLeadWithAssignment($leadId) {
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                l.*,
+                s.name as status_name,
+                u1.username as assigned_to_name,
+                u1.full_name as assigned_to_full_name,
+                u2.username as assigned_by_name,
+                u2.full_name as assigned_by_full_name,
+                ls.name as lead_source_name
+            FROM leads l
+            LEFT JOIN status s ON l.status_id = s.id
+            LEFT JOIN users u1 ON l.assigned_to = u1.id
+            LEFT JOIN users u2 ON l.assigned_by = u2.id
+            LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id
+            WHERE l.id = ?
+        ");
+        $stmt->execute([$leadId]);
+        return $stmt->fetch();
+    }
+
+    /**
+     * Check if lead is assigned
+     * @param int $leadId Lead ID
+     * @return bool True if assigned, false otherwise
+     */
+    public function isLeadAssigned($leadId) {
+        $stmt = $this->pdo->prepare("SELECT assigned_to FROM leads WHERE id = ?");
+        $stmt->execute([$leadId]);
+        $result = $stmt->fetch();
+        return !empty($result['assigned_to']);
+    }
+
+    /**
+     * Get leads assigned to a specific user
+     * @param int $userId User ID
+     * @param array $filters Additional filters
+     * @param int $limit Limit for pagination
+     * @param int $offset Offset for pagination
+     * @return array Assigned leads
+     */
+    public function getLeadsAssignedToUser($userId, $filters = [], $limit = 50, $offset = 0) {
+        $whereConditions = ["l.assigned_to = ?"];
+        $params = [$userId];
+
+        // Status filter
+        if (!empty($filters['status_id'])) {
+            $whereConditions[] = "l.status_id = ?";
+            $params[] = $filters['status_id'];
+        }
+
+        // Date filter
+        if (!empty($filters['assigned_date_from'])) {
+            $whereConditions[] = "DATE(l.assigned_at) >= ?";
+            $params[] = $filters['assigned_date_from'];
+        }
+
+        if (!empty($filters['assigned_date_to'])) {
+            $whereConditions[] = "DATE(l.assigned_at) <= ?";
+            $params[] = $filters['assigned_date_to'];
+        }
+
+        // Search filter
+        if (!empty($filters['search'])) {
+            $whereConditions[] = "(l.name LIKE ? OR l.company LIKE ? OR l.email LIKE ? OR l.lead_id LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        $stmt = $this->pdo->prepare("
+            SELECT 
+                l.*,
+                s.name as status_name,
+                u1.username as assigned_to_name,
+                u1.full_name as assigned_to_full_name,
+                u2.username as assigned_by_name,
+                u2.full_name as assigned_by_full_name,
+                ls.name as lead_source_name
+            FROM leads l
+            LEFT JOIN status s ON l.status_id = s.id
+            LEFT JOIN users u1 ON l.assigned_to = u1.id
+            LEFT JOIN users u2 ON l.assigned_by = u2.id
+            LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id
+            WHERE $whereClause
+            ORDER BY l.assigned_at DESC
+            LIMIT ? OFFSET ?
+        ");
+
+        $params[] = $limit;
+        $params[] = $offset;
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get count of leads assigned to a specific user
+     * @param int $userId User ID
+     * @param array $filters Additional filters
+     * @return int Count of assigned leads
+     */
+    public function getLeadsAssignedToUserCount($userId, $filters = []) {
+        $whereConditions = ["l.assigned_to = ?"];
+        $params = [$userId];
+
+        // Apply same filters as getLeadsAssignedToUser
+        if (!empty($filters['status_id'])) {
+            $whereConditions[] = "l.status_id = ?";
+            $params[] = $filters['status_id'];
+        }
+
+        if (!empty($filters['assigned_date_from'])) {
+            $whereConditions[] = "DATE(l.assigned_at) >= ?";
+            $params[] = $filters['assigned_date_from'];
+        }
+
+        if (!empty($filters['assigned_date_to'])) {
+            $whereConditions[] = "DATE(l.assigned_at) <= ?";
+            $params[] = $filters['assigned_date_to'];
+        }
+
+        if (!empty($filters['search'])) {
+            $whereConditions[] = "(l.name LIKE ? OR l.company LIKE ? OR l.email LIKE ? OR l.lead_id LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM leads l
+            WHERE $whereClause
+        ");
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return (int)$result['count'];
+    }
 }

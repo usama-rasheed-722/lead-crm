@@ -2,9 +2,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-users me-2"></i>Leads Management</h2>
-    <a href="index.php?action=lead_add" class="btn btn-primary">
-        <i class="fas fa-plus me-2"></i>Add New Lead
-    </a>
+    <div>
+        <a href="index.php?action=assigned_leads" class="btn btn-outline-info me-2">
+            <i class="fas fa-user-check me-2"></i>Assigned Leads
+        </a>
+        <a href="index.php?action=lead_add" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Lead
+        </a>
+    </div>
 </div>
 
 <?php if (isset($_GET['success'])): ?>
@@ -127,6 +132,9 @@
             </button>
             <button type="button" class="btn btn-sm btn-primary me-2" id="bulkUpdateBtn" disabled>
                 <i class="fas fa-edit me-1"></i>Bulk Update Status
+            </button>
+            <button type="button" class="btn btn-sm btn-info me-2" id="bulkAssignBtn" disabled>
+                <i class="fas fa-user-plus me-1"></i>Assign Selected
             </button>
             <?php if (auth_user()['role'] === 'admin'): ?>
                 <button type="button" class="btn btn-sm btn-danger me-2" id="bulkDeleteBtn" disabled>
@@ -286,6 +294,10 @@
                                            class="btn btn-outline-secondary" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <button type="button" class="btn btn-outline-info" 
+                                                onclick="assignLead(<?= $lead['id'] ?>)" title="Assign Lead">
+                                            <i class="fas fa-user-plus"></i>
+                                        </button>
                                         <a href="index.php?action=lead_delete&id=<?= $lead['id'] ?>" 
                                            class="btn btn-outline-danger btn-delete" title="Delete">
                                             <i class="fas fa-trash"></i>
@@ -439,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const leadCheckboxes = document.querySelectorAll('.lead-checkbox');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+    const bulkAssignBtn = document.getElementById('bulkAssignBtn');
     const bulkDeleteForm = document.getElementById('bulkDeleteForm');
     const bulkDeleteIds = document.getElementById('bulkDeleteIds');
     const bulkUpdateModal = document.getElementById('bulkUpdateModal') ? new bootstrap.Modal(document.getElementById('bulkUpdateModal')) : null;
@@ -511,6 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const count = selectedSet.size;
         if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
         if (bulkUpdateBtn) bulkUpdateBtn.disabled = count === 0;
+        if (bulkAssignBtn) bulkAssignBtn.disabled = count === 0;
         if (clearSelectionBtn) clearSelectionBtn.disabled = count === 0;
         if (selectedCountSpan) selectedCountSpan.textContent = count;
         if (selectionCount) selectionCount.textContent = count;
@@ -786,6 +800,182 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 });
+
+// Assignment functionality
+function assignLead(leadId) {
+    document.getElementById('assignLeadId').value = leadId;
+    const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+    modal.show();
+}
+
+function bulkAssign() {
+    const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
+    if (selectedLeads.length === 0) {
+        alert('Please select leads to assign.');
+        return;
+    }
+    
+    document.getElementById('bulkAssignCount').textContent = selectedLeads.length;
+    const modal = new bootstrap.Modal(document.getElementById('bulkAssignModal'));
+    modal.show();
+}
+
+// Add event listener for bulk assign button
+const bulkAssignBtn = document.getElementById('bulkAssignBtn');
+if (bulkAssignBtn) {
+    bulkAssignBtn.addEventListener('click', bulkAssign);
+}
+
+// Form submissions
+const assignForm = document.getElementById('assignForm');
+if (assignForm) {
+    assignForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        formData.append('redirect_url', window.location.href);
+        
+        fetch('index.php?action=assign_lead', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error assigning lead. Please try again.');
+            }
+        });
+    });
+}
+
+const bulkAssignForm = document.getElementById('bulkAssignForm');
+if (bulkAssignForm) {
+    bulkAssignForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
+        const formData = new FormData(this);
+        
+        selectedLeads.forEach(leadId => {
+            formData.append('lead_ids[]', leadId);
+        });
+        formData.append('redirect_url', window.location.href);
+        
+        fetch('index.php?action=bulk_assign_leads', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error assigning leads. Please try again.');
+            }
+        });
+    });
+}
 </script>
+
+<!-- Assignment Modals -->
+<!-- Single Lead Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Assign Lead
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignForm">
+                <div class="modal-body">
+                    <input type="hidden" id="assignLeadId" name="lead_id">
+                    <div class="mb-3">
+                        <label for="assignTo" class="form-label">Assign To</label>
+                        <select class="form-select" id="assignTo" name="assigned_to" required>
+                            <option value="">Select User</option>
+                            <?php
+                            // Get users for assignment dropdown
+                            $userModel = new UserModel();
+                            $users = $userModel->all();
+                            foreach ($users as $user): 
+                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
+                            ?>
+                                <option value="<?= $user['id'] ?>">
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                            <?php 
+                                endif;
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignComment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="assignComment" name="comment" rows="3" 
+                                  placeholder="Add a comment about this assignment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Assign Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Assignment Modal -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Bulk Assign Leads
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bulkAssignForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bulkAssignTo" class="form-label">Assign To</label>
+                        <select class="form-select" id="bulkAssignTo" name="assigned_to" required>
+                            <option value="">Select User</option>
+                            <?php
+                            foreach ($users as $user): 
+                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
+                            ?>
+                                <option value="<?= $user['id'] ?>">
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                            <?php 
+                                endif;
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bulkAssignComment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="bulkAssignComment" name="comment" rows="3" 
+                                  placeholder="Add a comment about this assignment..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="bulkAssignCount">0</span> leads will be assigned.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Assign Leads
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>

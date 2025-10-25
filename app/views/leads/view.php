@@ -8,6 +8,9 @@
         <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#quickStatusChangeModal">
             <i class="fas fa-sync me-2"></i>Change Status
         </button>
+        <button type="button" class="btn btn-info me-2" onclick="assignLead(<?= $lead['id'] ?>)">
+            <i class="fas fa-user-plus me-2"></i>Assign Lead
+        </button>
         <a href="index.php?action=lead_status_history&id=<?= $lead['id'] ?>" class="btn btn-info me-2">
             <i class="fas fa-history me-2"></i>Full Status History
         </a>
@@ -385,6 +388,24 @@
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- Assignment History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-check me-2"></i>Assignment History
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="assignmentHistoryContent">
+                    <div class="text-center p-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -651,6 +672,147 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 });
+
+// Load assignment history on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAssignmentHistory();
+});
+
+function loadAssignmentHistory() {
+    const content = document.getElementById('assignmentHistoryContent');
+    
+    fetch(`index.php?action=get_assignment_history&lead_id=<?= $lead['id'] ?>`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.history.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-sm mb-0">';
+                html += '<thead><tr><th>Assigned To</th><th>Assigned By</th><th>Date</th><th>Comment</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.history.forEach(assignment => {
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user me-2 text-primary"></i>
+                                    <div>
+                                        <div class="fw-bold">${assignment.assigned_to_name || 'Unknown'}</div>
+                                        <small class="text-muted">${assignment.assigned_to_full_name || ''}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-user-tie me-2 text-info"></i>
+                                    <div>
+                                        <div class="fw-bold">${assignment.assigned_by_name || 'Unknown'}</div>
+                                        <small class="text-muted">${assignment.assigned_by_full_name || ''}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div>${new Date(assignment.assigned_at).toLocaleDateString()}</div>
+                                    <small class="text-muted">${new Date(assignment.assigned_at).toLocaleTimeString()}</small>
+                                </div>
+                            </td>
+                            <td>
+                                ${assignment.comment ? `<span class="text-truncate d-inline-block" style="max-width: 150px;" title="${assignment.comment}">${assignment.comment}</span>` : '<span class="text-muted">No comment</span>'}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = '<div class="text-center p-4"><i class="fas fa-inbox fa-2x text-muted mb-2"></i><p class="text-muted mb-0">No assignment history found</p></div>';
+            }
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger m-3"><i class="fas fa-exclamation-triangle me-2"></i>Error loading assignment history</div>';
+        });
+}
+
+// Assignment functionality
+function assignLead(leadId) {
+    document.getElementById('assignLeadId').value = leadId;
+    const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+    modal.show();
+}
+
+// Form submission
+const assignForm = document.getElementById('assignForm');
+if (assignForm) {
+    assignForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        formData.append('redirect_url', window.location.href);
+        
+        fetch('index.php?action=assign_lead', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error assigning lead. Please try again.');
+            }
+        });
+    });
+}
 </script>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Assign Lead
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignForm">
+                <div class="modal-body">
+                    <input type="hidden" id="assignLeadId" name="lead_id">
+                    <div class="mb-3">
+                        <label for="assignTo" class="form-label">Assign To</label>
+                        <select class="form-select" id="assignTo" name="assigned_to" required>
+                            <option value="">Select User</option>
+                            <?php
+                            // Get users for assignment dropdown
+                            $userModel = new UserModel();
+                            $users = $userModel->all();
+                            foreach ($users as $user): 
+                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
+                            ?>
+                                <option value="<?= $user['id'] ?>">
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                            <?php 
+                                endif;
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignComment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="assignComment" name="comment" rows="3" 
+                                  placeholder="Add a comment about this assignment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Assign Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
