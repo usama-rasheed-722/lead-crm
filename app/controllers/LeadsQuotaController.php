@@ -39,13 +39,14 @@ class LeadsQuotaController extends Controller {
         $statusId = (int)($_POST['status_id'] ?? 0);
         $quotaCount = (int)($_POST['quota_count'] ?? 0);
         $assignedDate = $_POST['assigned_date'] ?? date('Y-m-d');
+        $explanation = trim($_POST['explanation'] ?? '');
         
         if (empty($userId) || empty($statusId) || empty($quotaCount)) {
             $this->redirect('index.php?action=leads_quota_assign&error=' . urlencode('All fields are required'));
         }
         
         try {
-            $quotaId = $this->leadsQuotaModel->create($userId, $statusId, $quotaCount, $assignedDate);
+            $quotaId = $this->leadsQuotaModel->create($userId, $statusId, $quotaCount, $assignedDate, $explanation);
             
             if ($quotaId) {
                 $this->redirect('index.php?action=leads_quota_manage&success=' . urlencode('Quota assigned successfully'));
@@ -215,6 +216,188 @@ class LeadsQuotaController extends Controller {
             }
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads_quota_manage&error=' . urlencode('Error: ' . $e->getMessage()));
+        }
+    }
+    
+    // Admin: Process daily rollover
+    public function processRollover() {
+        require_role(['admin']);
+        
+        $date = $_GET['date'] ?? date('Y-m-d');
+        
+        try {
+            $rolloverCount = $this->leadsQuotaModel->processDailyRollover($date);
+            
+            $this->redirect('index.php?action=leads_quota_manage&success=' . urlencode("Rollover processed successfully. {$rolloverCount} quotas rolled over."));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=leads_quota_manage&error=' . urlencode('Error processing rollover: ' . $e->getMessage()));
+        }
+    }
+    
+    // Admin: Quota Reports
+    public function reports() {
+        require_role(['admin']);
+        
+        $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+        $endDate = $_GET['end_date'] ?? date('Y-m-d');
+        $userId = $_GET['user_id'] ?? null;
+        
+        $quotaReport = $this->leadsQuotaModel->getQuotaReport($startDate, $endDate, $userId);
+        $quotaStats = $this->leadsQuotaModel->getQuotaStatistics($startDate, $endDate, $userId);
+        $users = $this->userModel->all();
+        
+        $this->view('leads_quota/reports', [
+            'quotaReport' => $quotaReport,
+            'quotaStats' => $quotaStats,
+            'users' => $users,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'selectedUserId' => $userId
+        ]);
+    }
+    
+    // SDR: Quota History
+    public function history() {
+        require_role(['sdr']);
+        
+        $user = auth_user();
+        $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+        $endDate = $_GET['end_date'] ?? date('Y-m-d');
+        
+        $quotaHistory = $this->leadsQuotaModel->getQuotaHistory($user['id'], $startDate, $endDate);
+        
+        $this->view('leads_quota/history', [
+            'quotaHistory' => $quotaHistory,
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]);
+    }
+    
+    // AJAX: Get quota statistics for dashboard
+    public function getQuotaStats() {
+        require_role(['sdr']);
+        
+        $user = auth_user();
+        $date = $_GET['date'] ?? date('Y-m-d');
+        
+        $summary = $this->leadsQuotaModel->getQuotaSummary($user['id'], $date);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['summary' => $summary]);
+        exit;
+    }
+    
+    // AJAX: Update lead status from quota view
+    public function updateLeadStatus() {
+        require_role(['sdr']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
+            exit;
+        }
+        
+        $leadId = (int)($_POST['lead_id'] ?? 0);
+        $newStatusId = (int)($_POST['new_status_id'] ?? 0);
+        $assignmentId = (int)($_POST['assignment_id'] ?? 0);
+        
+        if (empty($leadId) || empty($newStatusId) || empty($assignmentId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required parameters']);
+            exit;
+        }
+        
+        try {
+            // Update lead status using bulk update method with single lead
+            // The LeadModel will automatically mark quota as completed if status matches
+            $leadModel = new LeadModel();
+            $user = auth_user();
+            $result = $leadModel->bulkUpdateStatus([$leadId], $newStatusId, $user['id']);
+            
+            if ($result) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'message' => 'Lead status updated successfully']);
+                exit;
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to update lead status']);
+                exit;
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+    }
+    
+    // AJAX: Get statuses for dropdown
+    public function getStatuses() {
+        require_role(['sdr', 'admin']);
+        
+        try {
+            $statuses = $this->statusModel->all();
+            
+            header('Content-Type: application/json');
+            echo json_encode(['statuses' => $statuses]);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+    }
+    
+    // Export quota report to CSV
+    public function exportQuotaReport() {
+        require_role(['admin']);
+        
+        $startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+        $endDate = $_GET['end_date'] ?? date('Y-m-d');
+        $userId = $_GET['user_id'] ?? null;
+        
+        try {
+            $quotaReport = $this->leadsQuotaModel->getQuotaReport($startDate, $endDate, $userId);
+            
+            // Set headers for CSV download
+            $filename = 'quota_report_' . date('Y-m-d') . '.csv';
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            
+            // Create CSV output
+            $output = fopen('php://output', 'w');
+            
+            // CSV headers
+            fputcsv($output, [
+                'Date',
+                'SDR',
+                'Status',
+                'Assigned',
+                'Completed',
+                'Remaining',
+                'Carry Forward',
+                'Completion Rate (%)'
+            ]);
+            
+            // CSV data
+            foreach ($quotaReport as $quota) {
+                fputcsv($output, [
+                    $quota['assigned_date'],
+                    $quota['user_name'],
+                    $quota['status_name'],
+                    $quota['quota_count'],
+                    $quota['completed_leads'],
+                    $quota['remaining_leads'],
+                    $quota['quota_carry_forward'] ?? 0,
+                    round($quota['completion_percentage'], 2)
+                ]);
+            }
+            
+            fclose($output);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo 'Error generating report: ' . $e->getMessage();
+            exit;
         }
     }
 }

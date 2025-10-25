@@ -241,7 +241,28 @@ switch ($action) {
     case 'leads_quota_delete':
         (new LeadsQuotaController())->delete();
         break;
+    case 'leads_quota_process_rollover':
+        (new LeadsQuotaController())->processRollover();
+        break;
+    case 'leads_quota_reports':
+        (new LeadsQuotaController())->reports();
+        break;
+    case 'leads_quota_history':
+        (new LeadsQuotaController())->history();
+        break;
+    case 'leads_quota_get_quota_stats':
+        (new LeadsQuotaController())->getQuotaStats();
+        break;
+    case 'leads_quota_update_lead_status':
+        (new LeadsQuotaController())->updateLeadStatus();
+        break;
+    case 'get_statuses':
+        (new LeadsQuotaController())->getStatuses();
+        break;
+    case 'export_quota_report':
+        (new LeadsQuotaController())->exportQuotaReport();
+        break;
     default:
-        include __DIR__ . '/../views/errors/404.php';
+        include __DIR__ . '/app/views/errors/404.php';
         break;
 }

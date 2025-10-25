@@ -90,6 +90,21 @@
                         </div>
                     </div>
                     
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="explanation" class="form-label">Instructions/Explanation</label>
+                                <textarea class="form-control" id="explanation" name="explanation" rows="3" 
+                                          placeholder="Add specific instructions or explanation for this quota assignment..."></textarea>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    This explanation will be visible to the SDR when they view their assigned quota. 
+                                    Use this to provide specific instructions, priorities, or context for the quota.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> The system will automatically assign available leads from the selected status to the SDR for the specified date. 
@@ -120,6 +135,7 @@
                     <li>Choose the status for which to assign quota</li>
                     <li>Enter the number of leads to assign</li>
                     <li>Set the assignment date (default: today)</li>
+                    <li>Add instructions/explanation (optional)</li>
                     <li>Click "Assign Quota" to create the assignment</li>
                 </ol>
                 

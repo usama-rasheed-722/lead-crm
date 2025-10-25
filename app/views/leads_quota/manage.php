@@ -5,6 +5,9 @@
         <i class="fas fa-list me-2"></i>Manage Leads Quotas
     </h2>
     <div>
+        <a href="index.php?action=leads_quota_reports" class="btn btn-outline-info me-2">
+            <i class="fas fa-chart-bar me-2"></i>Reports
+        </a>
         <a href="index.php?action=leads_quota_assign" class="btn btn-primary me-2">
             <i class="fas fa-plus me-2"></i>Assign New Quota
         </a>
@@ -28,9 +31,9 @@
     </div>
 <?php endif; ?>
 
-<!-- Date Filter -->
+<!-- Date Filter and Rollover Controls -->
 <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-8">
         <div class="card">
             <div class="card-body">
                 <form method="GET" action="index.php" class="d-flex gap-2">
@@ -45,6 +48,23 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-sync-alt me-2"></i>Rollover Management
+                </h6>
+                <p class="card-text small text-muted mb-2">
+                    Process incomplete quotas from previous day
+                </p>
+                <a href="index.php?action=leads_quota_process_rollover&date=<?= htmlspecialchars($date) ?>" 
+                   class="btn btn-sm btn-warning" 
+                   onclick="return confirm('Are you sure you want to process rollover for <?= date('M j, Y', strtotime($date)) ?>?')">
+                    <i class="fas fa-sync-alt me-1"></i>Process Rollover
+                </a>
             </div>
         </div>
     </div>
@@ -68,7 +88,9 @@
                             <th>Assigned Leads</th>
                             <th>Completed Leads</th>
                             <th>Remaining</th>
+                            <th>Carry Forward</th>
                             <th>Progress</th>
+                            <th>Instructions</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -97,6 +119,15 @@
                                     <span class="badge bg-warning"><?= $quota['quota_count'] - $quota['completed_leads'] ?></span>
                                 </td>
                                 <td>
+                                    <?php if (isset($quota['quota_carry_forward']) && $quota['quota_carry_forward'] > 0): ?>
+                                        <span class="badge bg-info" title="Leads carried forward from previous days">
+                                            <i class="fas fa-arrow-right me-1"></i><?= $quota['quota_carry_forward'] ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php
                                     $percentage = $quota['quota_count'] > 0 ? ($quota['completed_leads'] / $quota['quota_count']) * 100 : 0;
                                     $progressClass = $percentage >= 100 ? 'bg-success' : ($percentage >= 75 ? 'bg-info' : ($percentage >= 50 ? 'bg-warning' : 'bg-danger'));
@@ -106,6 +137,18 @@
                                             <?= round($percentage, 1) ?>%
                                         </div>
                                     </div>
+                                </td>
+                                <td>
+                                    <?php if (!empty($quota['explanation'])): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="top" 
+                                                title="<?= htmlspecialchars($quota['explanation']) ?>">
+                                            <i class="fas fa-info-circle me-1"></i>View
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
@@ -175,5 +218,15 @@
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>

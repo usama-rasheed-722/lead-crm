@@ -732,10 +732,14 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             $params = array_merge([$newStatusId], $leadIds);
             $stmt->execute($params);
             
-            // Log status changes
+            // Log status changes and mark quota as completed if applicable
             foreach ($currentLeads as $lead) {
                 if ($lead['status_id'] != $newStatusId) {
                     $this->logStatusChange($lead['id'], $lead['status_id'], $newStatusId, $changedBy);
+                    
+                    // Mark quota as completed if the new status matches quota status
+                    $quotaModel = new LeadsQuotaModel();
+                    $quotaModel->markQuotaCompletedOnStatusChange($lead['id'], $newStatusId);
                 }
             }
             
@@ -776,6 +780,10 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             // Log status change with custom fields data
             if ($oldStatusId != $newStatusId) {
                 $this->logStatusChange($leadId, $oldStatusId, $newStatusId, $changedBy, $customFieldsData);
+                
+                // Mark quota as completed if the new status matches quota status
+                $quotaModel = new LeadsQuotaModel();
+                $quotaModel->markQuotaCompletedOnStatusChange($leadId, $newStatusId);
             }
             
             $this->pdo->commit();

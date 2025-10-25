@@ -134,11 +134,8 @@
                 </button>
             <?php endif; ?>
             <button type="button" class="btn btn-sm btn-outline-warning me-2" id="clearSelectionBtn" disabled>
-                <i class="fas fa-times me-1"></i>Clear Selection
+                <i class="fas fa-times me-1"></i><span id="selectionCount">0</span>  Clear Selection
             </button>
-            <span class="badge bg-info me-2" id="selectionBadge" style="display: none;">
-                <i class="fas fa-check-square me-1"></i>Selected: <span id="selectionCount">0</span> leads
-            </span>
             <a href="index.php?action=export_csv&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
