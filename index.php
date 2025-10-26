@@ -71,6 +71,21 @@ switch ($action) {
     case 'find_duplicates':
         (new LeadController())->findDuplicates($_GET['id'] ?? null);
         break;
+    case 'trash':
+        (new LeadController())->trash();
+        break;
+    case 'restore_lead':
+        (new LeadController())->restoreLead($_GET['id'] ?? null);
+        break;
+    case 'permanent_delete':
+        (new LeadController())->permanentDelete($_GET['id'] ?? null);
+        break;
+    case 'bulk_restore':
+        (new LeadController())->bulkRestore();
+        break;
+    case 'bulk_permanent_delete':
+        (new LeadController())->bulkPermanentDelete();
+        break;
     case 'merge_duplicates':
         (new LeadController())->mergeDuplicates($_GET['id'] ?? null);
         break;

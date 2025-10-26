@@ -95,6 +95,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'trash' ? 'active' : '' ?>" 
+                               href="<?= base_url('index.php?action=trash') ?>">
+                                <i class="fas fa-trash-alt me-2"></i>Trash
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'quota_management' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=quota_management') ?>">
                                 <i class="fas fa-chart-line me-2"></i>Quota Management

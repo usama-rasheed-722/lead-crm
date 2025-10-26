@@ -300,7 +300,7 @@ class LeadController extends Controller {
         }
     }
     
-    // Delete lead
+    // Delete lead (soft delete)
     public function delete($id) {
         if (!$id) {
             $this->redirect('index.php?action=leads');
@@ -321,9 +321,136 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->delete($id);
-            $this->redirect('index.php?action=leads');
+            $this->redirect('index.php?action=leads&success=' . urlencode('Lead moved to trash'));
         } catch (Exception $e) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Failed to delete lead'));
+        }
+    }
+    
+    // View trash (admin only)
+    public function trash() {
+        require_role(['admin']);
+        
+        $page = (int)($_GET['page'] ?? 1);
+        $limit = 100;
+        $offset = ($page - 1) * $limit;
+        
+        $deletedLeads = $this->leadModel->getDeletedLeads($limit, $offset);
+        $total = $this->leadModel->countDeletedLeads();
+        $totalPages = max(1, (int)ceil($total / $limit));
+        
+        $this->view('leads/trash', [
+            'leads' => $deletedLeads,
+            'page' => $page,
+            'total' => $total,
+            'totalPages' => $totalPages,
+            'limit' => $limit
+        ]);
+    }
+    
+    // Restore deleted lead (admin only)
+    public function restoreLead($id) {
+        require_role(['admin']);
+        
+        if (!$id) {
+            $this->redirect('index.php?action=trash');
+        }
+        
+        try {
+            $this->leadModel->restore($id);
+            $this->redirect('index.php?action=trash&success=' . urlencode('Lead restored successfully'));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('Failed to restore lead'));
+        }
+    }
+    
+    // Permanently delete lead (admin only)
+    public function permanentDelete($id) {
+        require_role(['admin']);
+        
+        if (!$id) {
+            $this->redirect('index.php?action=trash');
+        }
+        
+        try {
+            $this->leadModel->hardDelete($id);
+            $this->redirect('index.php?action=trash&success=' . urlencode('Lead permanently deleted'));
+        } catch (Exception $e) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('Failed to permanently delete lead'));
+        }
+    }
+    
+    // Bulk permanent delete (admin only)
+    public function bulkPermanentDelete() {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=trash');
+        }
+        
+        $leadIds = $_POST['lead_ids'] ?? '';
+        if (empty($leadIds)) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('No leads selected for deletion'));
+        }
+        
+        $ids = array_filter(array_map('intval', explode(',', $leadIds)));
+        if (empty($ids)) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('Invalid lead IDs provided'));
+        }
+        
+        try {
+            $pdo = $this->pdo;
+            $pdo->beginTransaction();
+            
+            $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("DELETE FROM leads WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            
+            $deletedCount = $stmt->rowCount();
+            $pdo->commit();
+            
+            $this->redirect("index.php?action=trash&success=" . urlencode("Successfully permanently deleted {$deletedCount} lead(s)"));
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $this->redirect("index.php?action=trash&error=" . urlencode('Failed to permanently delete leads: ' . $e->getMessage()));
+        }
+    }
+    
+    // Bulk restore (admin only)
+    public function bulkRestore() {
+        require_role(['admin']);
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('index.php?action=trash');
+        }
+        
+        $leadIds = $_POST['lead_ids'] ?? '';
+        if (empty($leadIds)) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('No leads selected for restoration'));
+        }
+        
+        $ids = array_filter(array_map('intval', explode(',', $leadIds)));
+        if (empty($ids)) {
+            $this->redirect('index.php?action=trash&error=' . urlencode('Invalid lead IDs provided'));
+        }
+        
+        try {
+            $pdo = $this->pdo;
+            $pdo->beginTransaction();
+            
+            $placeholders = str_repeat('?,', count($ids) - 1) . '?';
+            $stmt = $pdo->prepare("UPDATE leads SET deleted_at = NULL WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            
+            $restoredCount = $stmt->rowCount();
+            $pdo->commit();
+            
+            $this->redirect("index.php?action=trash&success=" . urlencode("Successfully restored {$restoredCount} lead(s)"));
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $this->redirect("index.php?action=trash&error=" . urlencode('Failed to restore leads: ' . $e->getMessage()));
         }
     }
     

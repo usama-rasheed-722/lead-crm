@@ -115,22 +115,51 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         return $result;
     }
 
-    // Delete a lead
+    // Delete a lead (soft delete)
     public function delete($id){
+        $stmt = $this->pdo->prepare('UPDATE leads SET deleted_at = NOW() WHERE id = ?');
+        return $stmt->execute([$id]);
+    }
+    
+    // Hard delete - permanently delete a lead
+    public function hardDelete($id){
         $stmt = $this->pdo->prepare('DELETE FROM leads WHERE id = ?');
         return $stmt->execute([$id]);
     }
+    
+    // Restore a soft-deleted lead
+    public function restore($id){
+        $stmt = $this->pdo->prepare('UPDATE leads SET deleted_at = NULL WHERE id = ?');
+        return $stmt->execute([$id]);
+    }
+    
+    // Get soft-deleted leads
+    public function getDeletedLeads($limit=100, $offset=0){
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id WHERE l.deleted_at IS NOT NULL ORDER BY l.deleted_at DESC LIMIT ? OFFSET ?');
+        $stmt->bindValue(1,(int)$limit,PDO::PARAM_INT);
+        $stmt->bindValue(2,(int)$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+    
+    // Count deleted leads
+    public function countDeletedLeads(){
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads WHERE deleted_at IS NOT NULL');
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
 
-    // Get a single lead by ID
-    public function getById($id){
-        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id WHERE l.id = ?');
+    // Get a single lead by ID (includes soft-deleted leads)
+    public function getById($id, $includeDeleted = false){
+        $whereClause = $includeDeleted ? '' : ' AND l.deleted_at IS NULL';
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id WHERE l.id = ?' . $whereClause);
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
 
-    // Get all leads (paginated)
+    // Get all leads (paginated, excludes deleted)
     public function all($limit=100, $offset=0){
-        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id ORDER BY l.created_at DESC LIMIT ? OFFSET ?');
+        $stmt = $this->pdo->prepare('SELECT l.*, u.username as sdr_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id WHERE l.deleted_at IS NULL ORDER BY l.created_at DESC LIMIT ? OFFSET ?');
         $stmt->bindValue(1,(int)$limit,PDO::PARAM_INT);
         $stmt->bindValue(2,(int)$offset,PDO::PARAM_INT);
         $stmt->execute();
@@ -174,7 +203,12 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if(!empty($filters['date_to'])){ $where[]='date(l.created_at) <= ?'; $params[] = $filters['date_to']; }
 
         $sql = 'SELECT l.*, u.username as sdr_name, ls.name as lead_source_name, s.name as status_name FROM leads l LEFT JOIN users u ON l.sdr_id = u.sdr_id LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id';
-        if($where) $sql .= ' WHERE '.implode(' AND ',$where);
+        if($where) {
+            $sql .= ' WHERE '.implode(' AND ',$where);
+            $sql .= ' AND l.deleted_at IS NULL';
+        } else {
+            $sql .= ' WHERE l.deleted_at IS NULL';
+        }
         $sql .= ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
         $params[] = (int)$limit; $params[] = (int)$offset;
         $stmt = $this->pdo->prepare($sql);
@@ -217,7 +251,12 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if(!empty($filters['date_to'])){ $where[]='l.created_at <= ?'; $params[] = $filters['date_to']; }
 
         $sql = 'SELECT COUNT(*) as cnt FROM leads l LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id LEFT JOIN status s ON l.status_id = s.id';
-        if($where) $sql .= ' WHERE '.implode(' AND ',$where);
+        if($where) {
+            $sql .= ' WHERE '.implode(' AND ',$where);
+            $sql .= ' AND l.deleted_at IS NULL';
+        } else {
+            $sql .= ' WHERE l.deleted_at IS NULL';
+        }
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $row = $stmt->fetch();
