@@ -32,6 +32,12 @@ class LeadAssignmentController extends Controller {
             'search' => $_GET['search'] ?? ''
         ];
 
+        // Role-based filtering: SDRs can only see leads assigned to them
+        $currentUser = auth_user();
+        if ($currentUser['role'] === 'sdr') {
+            $filters['assigned_to'] = $currentUser['id']; // Force filter to current SDR
+        }
+
         $page = (int)($_GET['page'] ?? 1);
         $limit = 50;
         $offset = ($page - 1) * $limit;
@@ -53,26 +59,54 @@ class LeadAssignmentController extends Controller {
     public function assignLead() {
         require_role(['admin', 'sdr', 'manager']);
         
+        // Debug: Log all request data
+        error_log("Assignment request - Method: " . $_SERVER['REQUEST_METHOD']);
+        error_log("Assignment request - POST data: " . print_r($_POST, true));
+        error_log("Assignment request - GET data: " . print_r($_GET, true));
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $leadId = (int)$_POST['lead_id'];
             $assignedTo = (int)$_POST['assigned_to'];
             $comment = trim($_POST['comment'] ?? '');
-            $assignedBy = $_SESSION['user_id'];
+            $assignedBy = $_SESSION['id'];
+
+            // Debug: Log all POST data
+            error_log("Individual Assignment POST Data: " . print_r($_POST, true));
+            error_log("Lead ID: $leadId, Assigned To: $assignedTo, Assigned By: $assignedBy");
 
             if ($leadId && $assignedTo) {
-                $success = $this->leadAssignmentModel->assignLead($leadId, $assignedTo, $assignedBy, $comment);
-                
-                if ($success) {
-                    $_SESSION['success_message'] = 'Lead assigned successfully!';
-                } else {
-                    $_SESSION['error_message'] = 'Failed to assign lead. Please try again.';
+                try {
+                    $success = $this->leadAssignmentModel->assignLead($leadId, $assignedTo, $assignedBy, $comment);
+                    
+                    if ($success) {
+                        $_SESSION['success_message'] = 'Lead assigned successfully!';
+                        error_log("Assignment successful for lead $leadId");
+                    } else {
+                        $_SESSION['error_message'] = 'Failed to assign lead. Please try again.';
+                        error_log("Assignment failed for lead $leadId");
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = 'Error assigning lead: ' . $e->getMessage();
+                    error_log("Assignment error for lead $leadId: " . $e->getMessage());
                 }
             } else {
                 $_SESSION['error_message'] = 'Please select a user to assign the lead to.';
+                error_log("Assignment validation failed - Lead ID: $leadId, Assigned To: $assignedTo");
             }
 
             // Redirect back to the page that initiated the assignment
             $redirectUrl = $_POST['redirect_url'] ?? 'index.php?action=leads';
+            
+            // Clean up the redirect URL to avoid issues
+            if (strpos($redirectUrl, 'http') === 0) {
+                // If it's a full URL, extract just the path and query
+                $parsedUrl = parse_url($redirectUrl);
+                $redirectUrl = $parsedUrl['path'] ?? 'index.php?action=leads';
+                if (!empty($parsedUrl['query'])) {
+                    $redirectUrl .= '?' . $parsedUrl['query'];
+                }
+            }
+            
             header("Location: $redirectUrl");
             exit;
         }
@@ -88,25 +122,45 @@ class LeadAssignmentController extends Controller {
             $leadIds = $_POST['lead_ids'] ?? [];
             $assignedTo = (int)$_POST['assigned_to'];
             $comment = trim($_POST['comment'] ?? '');
-            $assignedBy = $_SESSION['user_id'];
-
+            $assignedBy = $_SESSION['user']['id'];
+            // pr(   $leadIds,1);
+       
             if (!empty($leadIds) && $assignedTo) {
-                $results = $this->leadAssignmentModel->bulkAssignLeads($leadIds, $assignedTo, $assignedBy, $comment);
-                
-                $successCount = count(array_filter($results));
-                $totalCount = count($results);
-                
-                if ($successCount > 0) {
-                    $_SESSION['success_message'] = "Successfully assigned $successCount out of $totalCount leads!";
-                } else {
-                    $_SESSION['error_message'] = 'Failed to assign any leads. Please try again.';
+                try {
+                    $results = $this->leadAssignmentModel->bulkAssignLeads($leadIds, $assignedTo, $assignedBy, $comment);
+                    
+                    $successCount = count(array_filter($results));
+                    $totalCount = count($results);
+                    
+                    error_log("Bulk assignment attempt - Leads: " . implode(',', $leadIds) . ", Assigned To: $assignedTo, Success: $successCount/$totalCount");
+                    
+                    if ($successCount > 0) {
+                        $_SESSION['success_message'] = "Successfully assigned $successCount out of $totalCount leads!";
+                    } else {
+                        $_SESSION['error_message'] = 'Failed to assign any leads. Please try again.';
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = 'Error assigning leads: ' . $e->getMessage();
+                    error_log("Bulk assignment error: " . $e->getMessage());
                 }
             } else {
                 $_SESSION['error_message'] = 'Please select leads and a user to assign them to.';
+                error_log("Bulk assignment validation failed - Lead IDs: " . implode(',', $leadIds) . ", Assigned To: $assignedTo");
             }
 
             // Redirect back to the page that initiated the assignment
             $redirectUrl = $_POST['redirect_url'] ?? 'index.php?action=leads';
+            
+            // Clean up the redirect URL to avoid issues
+            if (strpos($redirectUrl, 'http') === 0) {
+                // If it's a full URL, extract just the path and query
+                $parsedUrl = parse_url($redirectUrl);
+                $redirectUrl = $parsedUrl['path'] ?? 'index.php?action=leads';
+                if (!empty($parsedUrl['query'])) {
+                    $redirectUrl .= '?' . $parsedUrl['query'];
+                }
+            }
+            
             header("Location: $redirectUrl");
             exit;
         }

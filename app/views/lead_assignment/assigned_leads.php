@@ -1,7 +1,13 @@
 <?php include __DIR__ . '/../layout/header.php'; ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-user-check me-2"></i>Assigned Leads</h2>
+    <h2><i class="fas fa-user-check me-2"></i>
+        <?php if (auth_user()['role'] === 'sdr'): ?>
+            My Assigned Leads
+        <?php else: ?>
+            Assigned Leads
+        <?php endif; ?>
+    </h2>
     <div>
         <a href="index.php?action=leads" class="btn btn-outline-secondary me-2">
             <i class="fas fa-arrow-left me-2"></i>Back to All Leads
@@ -120,6 +126,7 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php if (auth_user()['role'] !== 'sdr'): ?>
                 <div class="col-md-3">
                     <label for="assigned_to" class="form-label">Assigned To</label>
                     <select class="form-select" id="assigned_to" name="assigned_to">
@@ -131,6 +138,7 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php endif; ?>
                 <div class="col-md-3">
                     <label for="status_id" class="form-label">Status</label>
                     <select class="form-select" id="status_id" name="status_id">
@@ -172,7 +180,12 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
-            <i class="fas fa-list me-2"></i>Assigned Leads 
+            <i class="fas fa-list me-2"></i>
+            <?php if (auth_user()['role'] === 'sdr'): ?>
+                My Assigned Leads
+            <?php else: ?>
+                Assigned Leads
+            <?php endif; ?>
             <span class="badge bg-primary"><?= number_format($totalLeads) ?></span>
         </h5>
         <div class="btn-group" role="group">
@@ -217,9 +230,11 @@
                             <th class="sortable" data-column="status_name">
                                 Status <i class="fas fa-sort"></i>
                             </th>
+                            <?php if (auth_user()['role'] !== 'sdr'): ?>
                             <th class="sortable" data-column="assigned_to_name">
                                 Assigned To <i class="fas fa-sort"></i>
                             </th>
+                            <?php endif; ?>
                             <th class="sortable" data-column="assigned_by_name">
                                 Assigned By <i class="fas fa-sort"></i>
                             </th>
@@ -262,6 +277,7 @@
                                 <td>
                                     <span class="badge bg-secondary"><?= htmlspecialchars($lead['status_name'] ?? '') ?></span>
                                 </td>
+                                <?php if (auth_user()['role'] !== 'sdr'): ?>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user me-2 text-primary"></i>
@@ -273,6 +289,7 @@
                                         </div>
                                     </div>
                                 </td>
+                                <?php endif; ?>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user-tie me-2 text-info"></i>
@@ -317,10 +334,12 @@
                                                 onclick="reassignLead(<?= $lead['id'] ?>)" title="Reassign Lead">
                                             <i class="fas fa-user-edit"></i>
                                         </button>
+                                        <?php if (auth_user()['role'] !== 'sdr'): ?>
                                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                                 onclick="unassignLead(<?= $lead['id'] ?>)" title="Unassign Lead">
                                             <i class="fas fa-user-times"></i>
                                         </button>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -341,9 +360,11 @@
                 <button type="button" class="btn btn-primary btn-sm" onclick="bulkReassign()">
                     <i class="fas fa-user-edit me-1"></i>Reassign Selected
                 </button>
+                <?php if (auth_user()['role'] !== 'sdr'): ?>
                 <button type="button" class="btn btn-danger btn-sm" onclick="bulkUnassign()">
                     <i class="fas fa-user-times me-1"></i>Unassign Selected
                 </button>
+                <?php endif; ?>
                 <span class="text-muted" id="selectedCount">0 leads selected</span>
             </div>
         </div>

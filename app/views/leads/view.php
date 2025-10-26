@@ -745,22 +745,21 @@ function assignLead(leadId) {
 const assignForm = document.getElementById('assignForm');
 if (assignForm) {
     assignForm.addEventListener('submit', function(e) {
-        e.preventDefault();
+        // Add redirect URL to form data
+        const redirectInput = document.createElement('input');
+        redirectInput.type = 'hidden';
+        redirectInput.name = 'redirect_url';
+        redirectInput.value = window.location.href;
+        this.appendChild(redirectInput);
         
-        const formData = new FormData(this);
-        formData.append('redirect_url', window.location.href);
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Assigning...';
+        submitBtn.disabled = true;
         
-        fetch('index.php?action=assign_lead', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error assigning lead. Please try again.');
-            }
-        });
+        // Let the form submit naturally to the action URL
+        // The controller will handle the redirect back to this page
     });
 }
 </script>
@@ -775,7 +774,7 @@ if (assignForm) {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="assignForm">
+            <form id="assignForm" method="POST" action="index.php?action=assign_lead">
                 <div class="modal-body">
                     <input type="hidden" id="assignLeadId" name="lead_id">
                     <div class="mb-3">

@@ -411,6 +411,109 @@
     </div>
 </div>
 
+
+
+<!-- Assignment Modals -->
+<!-- Single Lead Assignment Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Assign Lead
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignForm" method="POST" action="index.php?action=assign_lead">
+                <div class="modal-body">
+                    <input type="hidden" id="assignLeadId" name="lead_id">
+                    <div class="mb-3">
+                        <label for="assignTo" class="form-label">Assign To</label>
+                        <select class="form-select" id="assignTo" name="assigned_to" required>
+                            <option value="">Select User</option>
+                            <?php
+                            // Get users for assignment dropdown
+                            $userModel = new UserModel();
+                            $users = $userModel->all();
+                            foreach ($users as $user): 
+                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
+                            ?>
+                                <option value="<?= $user['id'] ?>">
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                            <?php 
+                                endif;
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignComment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="assignComment" name="comment" rows="3" 
+                                  placeholder="Add a comment about this assignment..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Assign Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Assignment Modal -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Bulk Assign Leads
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bulkAssignForm" method="POST" action="index.php?action=bulk_assign_leads">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="bulkAssignTo" class="form-label">Assign To</label>
+                        <select class="form-select" id="bulkAssignTo" name="assigned_to" required>
+                            <option value="">Select User</option>
+                            <?php
+                            foreach ($users as $user): 
+                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
+                            ?>
+                                <option value="<?= $user['id'] ?>">
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                            <?php 
+                                endif;
+                            endforeach; 
+                            ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bulkAssignComment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="bulkAssignComment" name="comment" rows="3" 
+                                  placeholder="Add a comment about this assignment..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="bulkAssignCount">0</span> leads will be assigned.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-1"></i>Assign Leads
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Bulk Delete Form -->
 <form id="bulkDeleteForm" method="POST" action="index.php?action=bulk_delete" style="display: none;">
     <input type="hidden" name="lead_ids" id="bulkDeleteIds">
@@ -830,152 +933,85 @@ if (bulkAssignBtn) {
 const assignForm = document.getElementById('assignForm');
 if (assignForm) {
     assignForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
+        // Debug: Log form data before submission
         const formData = new FormData(this);
-        formData.append('redirect_url', window.location.href);
+        console.log('Individual assignment form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
         
-        fetch('index.php?action=assign_lead', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error assigning lead. Please try again.');
-            }
-        });
+        // Add redirect URL to form data
+        const redirectInput = document.createElement('input');
+        redirectInput.type = 'hidden';
+        redirectInput.name = 'redirect_url';
+        redirectInput.value = window.location.href;
+        this.appendChild(redirectInput);
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Assigning...';
+        submitBtn.disabled = true;
+        
+        // Let the form submit naturally to the action URL
+        // The controller will handle the redirect back to this page
     });
 }
 
 const bulkAssignForm = document.getElementById('bulkAssignForm');
+ 
 if (bulkAssignForm) {
+ 
     bulkAssignForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
         const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-        const formData = new FormData(this);
+ 
+        console.log('Selected leads:', selectedLeads);
+       
+        if (selectedLeads.length === 0) {
+            alert('Please select at least one lead to assign.');
+            e.preventDefault();
+            return;
+        }
         
+        // Remove any existing lead_ids inputs
+        const existingInputs = this.querySelectorAll('input[name="lead_ids[]"]');
+        existingInputs.forEach(input => input.remove());
+        
+        // Add selected lead IDs as hidden inputs
         selectedLeads.forEach(leadId => {
-            formData.append('lead_ids[]', leadId);
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'lead_ids[]';
+            input.value = leadId;
+            this.appendChild(input);
         });
-        formData.append('redirect_url', window.location.href);
         
-        fetch('index.php?action=bulk_assign_leads', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error assigning leads. Please try again.');
-            }
-        });
+        // Add redirect URL to form data
+        const redirectInput = document.createElement('input');
+        redirectInput.type = 'hidden';
+        redirectInput.name = 'redirect_url';
+        redirectInput.value = window.location.href;
+        this.appendChild(redirectInput);
+        
+        // Debug: Log form data before submission
+        const formData = new FormData(this);
+        console.log('Form data being submitted:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Assigning...';
+        submitBtn.disabled = true;
+        
+        // Let the form submit naturally to the action URL
+        // The controller will handle the redirect back to this page
     });
 }
 </script>
 
-<!-- Assignment Modals -->
-<!-- Single Lead Assignment Modal -->
-<div class="modal fade" id="assignModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>Assign Lead
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="assignForm">
-                <div class="modal-body">
-                    <input type="hidden" id="assignLeadId" name="lead_id">
-                    <div class="mb-3">
-                        <label for="assignTo" class="form-label">Assign To</label>
-                        <select class="form-select" id="assignTo" name="assigned_to" required>
-                            <option value="">Select User</option>
-                            <?php
-                            // Get users for assignment dropdown
-                            $userModel = new UserModel();
-                            $users = $userModel->all();
-                            foreach ($users as $user): 
-                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
-                            ?>
-                                <option value="<?= $user['id'] ?>">
-                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
-                                </option>
-                            <?php 
-                                endif;
-                            endforeach; 
-                            ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="assignComment" class="form-label">Comment</label>
-                        <textarea class="form-control" id="assignComment" name="comment" rows="3" 
-                                  placeholder="Add a comment about this assignment..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-user-plus me-1"></i>Assign Lead
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-<!-- Bulk Assignment Modal -->
-<div class="modal fade" id="bulkAssignModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>Bulk Assign Leads
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="bulkAssignForm">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="bulkAssignTo" class="form-label">Assign To</label>
-                        <select class="form-select" id="bulkAssignTo" name="assigned_to" required>
-                            <option value="">Select User</option>
-                            <?php
-                            foreach ($users as $user): 
-                                if (in_array($user['role'], ['admin', 'sdr', 'manager'])):
-                            ?>
-                                <option value="<?= $user['id'] ?>">
-                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
-                                </option>
-                            <?php 
-                                endif;
-                            endforeach; 
-                            ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="bulkAssignComment" class="form-label">Comment</label>
-                        <textarea class="form-control" id="bulkAssignComment" name="comment" rows="3" 
-                                  placeholder="Add a comment about this assignment..."></textarea>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <span id="bulkAssignCount">0</span> leads will be assigned.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-user-plus me-1"></i>Assign Leads
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
