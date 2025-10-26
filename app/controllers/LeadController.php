@@ -10,6 +10,30 @@ class LeadController extends Controller {
         $this->userModel = new UserModel();
     }
     
+    /**
+     * Check if SDR has access to a lead
+     * Priority 1: Check if lead is assigned to user (assigned_to column)
+     * Priority 2: Check if user is the owner (sdr_id matches)
+     */
+    private function canAccessLead($lead, $user) {
+        if ($user['role'] !== 'sdr') {
+            return true; // Admins and managers have access
+        }
+        
+        // Priority 1: Check if lead is assigned to this user
+        if (!empty($lead['assigned_to']) && (string)$lead['assigned_to'] === (string)$user['id']) {
+            return true;
+        }
+        
+        // Priority 2: Check if user is the owner
+        $userSdrId = $user['sdr_id'] ?? $user['id'];
+        if ((string)$lead['sdr_id'] === (string)$userSdrId) {
+            return true;
+        }
+        
+        return false;
+    }
+    
     // List all leads with search and filters
     public function index() {
         $user = auth_user();
@@ -79,10 +103,11 @@ class LeadController extends Controller {
         if (!$lead) {
             $this->redirect('index.php?action=leads');
         }
+        // pr( $lead,1);
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -189,7 +214,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -222,7 +247,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -288,7 +313,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -315,7 +340,7 @@ class LeadController extends Controller {
         
         // Check permissions
         $user = auth_user();
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != $user['id']) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
@@ -378,15 +403,15 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads');
         }
         
-        // Check permissions (SDR can only act on their own leads)
+        // Check permissions
         $user = auth_user();
-        $currentSdrId = $user['sdr_id'] ?? $user['id'];
-        if ($user['role'] === 'sdr' && (string)$lead['sdr_id'] !== (string)$currentSdrId) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
         }
         
+        $currentSdrId = $user['sdr_id'] ?? $user['id'];
         $duplicates = $this->leadModel->findDuplicates($id);
         // For SDRs, only show duplicates that belong to them
         if ($user['role'] === 'sdr') {
@@ -412,15 +437,15 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads');
         }
         
-        // Check permissions (SDR can only act on their own leads)
+        // Check permissions
         $user = auth_user();
-        $currentSdrId = $user['sdr_id'] ?? $user['id'];
-        if ($user['role'] === 'sdr' && (string)$lead['sdr_id'] !== (string)$currentSdrId) {
+        if (!$this->canAccessLead($lead, $user)) {
             http_response_code(403);
             echo 'Access denied';
             exit;
         }
         
+        $currentSdrId = $user['sdr_id'] ?? $user['id'];
         $duplicateIds = $_POST['duplicate_ids'] ?? [];
         if (empty($duplicateIds)) {
             $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('No duplicates selected for merging'));
@@ -521,10 +546,9 @@ class LeadController extends Controller {
         
         // Check permissions for each lead
         if ($user['role'] === 'sdr') {
-            $userSdrId = $user['sdr_id'] ?? $user['id'];
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
-                if (!$lead || $lead['sdr_id'] != $userSdrId) {
+                if (!$lead || !$this->canAccessLead($lead, $user)) {
                     $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
                 }
             }
@@ -577,7 +601,7 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
         }
         
-        if ($user['role'] === 'sdr' && $lead['sdr_id'] != ($user['sdr_id'] ?? $user['id'])) {
+        if (!$this->canAccessLead($lead, $user)) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
         }
         
@@ -661,10 +685,9 @@ class LeadController extends Controller {
         
         // Check permissions for each lead
         if ($user['role'] === 'sdr') {
-            $userSdrId = $user['sdr_id'] ?? $user['id'];
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
-                if (!$lead || $lead['sdr_id'] != $userSdrId) {
+                if (!$lead || !$this->canAccessLead($lead, $user)) {
                     $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
                 }
             }
@@ -714,19 +737,15 @@ class LeadController extends Controller {
         
         $user = auth_user();
         
-        // Check permissions
-        if ($user['role'] === 'sdr') {
-            $userSdrId = $user['sdr_id'] ?? $user['id'];
-            $lead = $this->leadModel->getById($leadId);
-            if (!$lead || $lead['sdr_id'] != $userSdrId) {
-                $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
-            }
-        }
-        
-        // Get lead details
+        // Get lead details first
         $lead = $this->leadModel->getById($leadId);
         if (!$lead) {
             $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
+        }
+        
+        // Check permissions
+        if (!$this->canAccessLead($lead, $user)) {
+            $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
         }
         
         // Get status history
