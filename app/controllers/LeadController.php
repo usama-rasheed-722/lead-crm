@@ -62,7 +62,7 @@ class LeadController extends Controller {
         }
         
         $leads = $this->leadModel->search($search, $filters, $limit, $offset);
-        // pr( $leads ,1);
+
         $total = $this->leadModel->countSearch($search, $filters);
         $totalPages = max(1, (int)ceil($total / $limit));
         $users = $this->userModel->all();
@@ -103,7 +103,6 @@ class LeadController extends Controller {
         if (!$lead) {
             $this->redirect('index.php?action=leads');
         }
-        // pr( $lead,1);
         
         // Check permissions
         $user = auth_user();
@@ -149,7 +148,7 @@ class LeadController extends Controller {
             $this->redirect('index.php?action=lead_add');
         }
         $user = auth_user();
-        
+
         $data = [
             'name' => trim($_POST['name'] ?? ''),
             'lead_id' => trim($_POST['lead_id'] ?? generateNextSDR(empty($_POST['sdr_id'])?($user['sdr_id'] ?? $user['id']):$_POST['sdr_id'])),
@@ -179,6 +178,8 @@ class LeadController extends Controller {
             'notes' => trim($_POST['notes'] ?? ''),
             'created_by' => $user['id']
         ];
+
+        
         
         try {
             $leadId = $this->leadModel->create($data);

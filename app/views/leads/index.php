@@ -127,6 +127,9 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Leads (<?= (int)($total ?? count($leads)) ?> found)</h5>
         <div>
+            <button type="button" class="btn btn-sm btn-outline-warning me-2" id="clearSelectionBtn" disabled>
+                <i class="fas fa-times me-1"></i><span id="selectionCount">0</span>  Clear Selection
+            </button>
             <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="columnsBtn">
                 <i class="fas fa-columns me-1"></i>Columns
             </button>
@@ -141,9 +144,6 @@
                     <i class="fas fa-trash me-1"></i>Delete Selected
                 </button>
             <?php endif; ?>
-            <button type="button" class="btn btn-sm btn-outline-warning me-2" id="clearSelectionBtn" disabled>
-                <i class="fas fa-times me-1"></i><span id="selectionCount">0</span>  Clear Selection
-            </button>
             <a href="index.php?action=export_csv&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
@@ -902,114 +902,118 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
     }
-});
-
-// Assignment functionality
-function assignLead(leadId) {
-    document.getElementById('assignLeadId').value = leadId;
-    const modal = new bootstrap.Modal(document.getElementById('assignModal'));
-    modal.show();
-}
-
-function bulkAssign() {
-    const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-    if (selectedLeads.length === 0) {
-        alert('Please select leads to assign.');
-        return;
+    // Assignment functionality
+    function assignLead(leadId) {
+        document.getElementById('assignLeadId').value = leadId;
+        const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+        modal.show();
     }
-    
-    document.getElementById('bulkAssignCount').textContent = selectedLeads.length;
-    const modal = new bootstrap.Modal(document.getElementById('bulkAssignModal'));
-    modal.show();
-}
 
-// Add event listener for bulk assign button
-const bulkAssignBtn = document.getElementById('bulkAssignBtn');
-if (bulkAssignBtn) {
-    bulkAssignBtn.addEventListener('click', bulkAssign);
-}
-
-// Form submissions
-const assignForm = document.getElementById('assignForm');
-if (assignForm) {
-    assignForm.addEventListener('submit', function(e) {
-        // Debug: Log form data before submission
-        const formData = new FormData(this);
-        console.log('Individual assignment form data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value);
-        }
-        
-        // Add redirect URL to form data
-        const redirectInput = document.createElement('input');
-        redirectInput.type = 'hidden';
-        redirectInput.name = 'redirect_url';
-        redirectInput.value = window.location.href;
-        this.appendChild(redirectInput);
-        
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Assigning...';
-        submitBtn.disabled = true;
-        
-        // Let the form submit naturally to the action URL
-        // The controller will handle the redirect back to this page
-    });
-}
-
-const bulkAssignForm = document.getElementById('bulkAssignForm');
- 
-if (bulkAssignForm) {
- 
-    bulkAssignForm.addEventListener('submit', function(e) {
+    function bulkAssign() {
         const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
- 
-        console.log('Selected leads:', selectedLeads);
-       
         if (selectedLeads.length === 0) {
-            alert('Please select at least one lead to assign.');
-            e.preventDefault();
+            alert('Please select leads to assign.');
             return;
         }
-        
-        // Remove any existing lead_ids inputs
-        const existingInputs = this.querySelectorAll('input[name="lead_ids[]"]');
-        existingInputs.forEach(input => input.remove());
-        
-        // Add selected lead IDs as hidden inputs
-        selectedLeads.forEach(leadId => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'lead_ids[]';
-            input.value = leadId;
-            this.appendChild(input);
-        });
-        
-        // Add redirect URL to form data
-        const redirectInput = document.createElement('input');
-        redirectInput.type = 'hidden';
-        redirectInput.name = 'redirect_url';
-        redirectInput.value = window.location.href;
-        this.appendChild(redirectInput);
-        
-        // Debug: Log form data before submission
-        const formData = new FormData(this);
-        console.log('Form data being submitted:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value);
+      
+        // Check if the element exists before setting textContent
+        const bulkAssignCountElement = document.getElementById('bulkAssignCount');
+        if (bulkAssignCountElement) {
+            bulkAssignCountElement.textContent = selectedLeads.length;
+        } else {
+            console.warn('bulkAssignCount element not found, trying to find it after modal is shown');
         }
         
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'Assigning...';
-        submitBtn.disabled = true;
+        // Check if the modal exists before showing it
+        const bulkAssignModalElement = document.getElementById('bulkAssignModal');
+        if (bulkAssignModalElement) {
+            const modal = new bootstrap.Modal(bulkAssignModalElement);
+            
+            // Add event listener to update count after modal is shown
+            bulkAssignModalElement.addEventListener('shown.bs.modal', function() {
+                const countElement = document.getElementById('bulkAssignCount');
+                if (countElement) {
+                    countElement.textContent = selectedLeads.length;
+                }
+            }, { once: true }); // Use once: true to prevent multiple listeners
+            
+            modal.show();
+        } else {
+            console.error('Bulk assign modal not found in DOM');
+        }
         
-        // Let the form submit naturally to the action URL
-        // The controller will handle the redirect back to this page
-    });
-}
+    }
+
+    // Add event listener for bulk assign button
+    if (bulkAssignBtn) {
+        bulkAssignBtn.addEventListener('click', bulkAssign);
+    }
+
+    // Form submissions
+    const assignForm = document.getElementById('assignForm');
+    if (assignForm) {
+        assignForm.addEventListener('submit', function(e) {
+            // Debug: Log form data before submission
+            const formData = new FormData(this);
+            console.log('Individual assignment form data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+            
+            // Add redirect URL to form data
+            const redirectInput = document.createElement('input');
+            redirectInput.type = 'hidden';
+            redirectInput.name = 'redirect_url';
+            redirectInput.value = window.location.href;
+            this.appendChild(redirectInput);
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Assigning...';
+            submitBtn.disabled = true;
+            
+            // Let the form submit naturally to the action URL
+            // The controller will handle the redirect back to this page
+        });
+    }
+
+    const bulkAssignForm = document.getElementById('bulkAssignForm');
+    if (bulkAssignForm) {
+        bulkAssignForm.addEventListener('submit', function(e) {
+            // Debug: Log form data before submission
+            const formData = new FormData(this);
+            console.log('Bulk assignment form data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+            
+            // Add selected lead IDs to form data
+            const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
+            const leadIdsInput = document.createElement('input');
+            leadIdsInput.type = 'hidden';
+            leadIdsInput.name = 'lead_ids';
+            leadIdsInput.value = selectedLeads.join(',');
+            this.appendChild(leadIdsInput);
+            
+            // Add redirect URL to form data
+            const redirectInput = document.createElement('input');
+            redirectInput.type = 'hidden';
+            redirectInput.name = 'redirect_url';
+            redirectInput.value = window.location.href;
+            this.appendChild(redirectInput);
+            
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Assigning...';
+            submitBtn.disabled = true;
+            
+            // Let the form submit naturally to the action URL
+            // The controller will handle the redirect back to this page
+        });
+    }
+});
 </script>
 
 

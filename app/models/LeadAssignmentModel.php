@@ -14,23 +14,33 @@ class LeadAssignmentModel extends Model {
             $this->pdo->beginTransaction();
 
             // Deactivate previous assignments for this lead
-            $stmt = $this->pdo->prepare("UPDATE lead_assignments SET is_active = 0 WHERE lead_id = ?");
-            $stmt->execute([$leadId]);
+            $updateData = ['is_active' => 0];
+            $this->update_data('lead_assignments', $updateData, "lead_id = {$leadId}");
 
             // Create new assignment record
-            $stmt = $this->pdo->prepare("
-                INSERT INTO lead_assignments (lead_id, assigned_to, assigned_by, comment, is_active)
-                VALUES (?, ?, ?, ?, 1)
-            ");
-            $stmt->execute([$leadId, $assignedTo, $assignedBy, $comment]);
+            $insertData = [
+                'lead_id' => $leadId,
+                'assigned_to' => $assignedTo,
+                'assigned_by' => $assignedBy,
+                'comment' => $comment,
+                'is_active' => 1
+            ];
+            
+            $this->insert('lead_assignments', $insertData);
 
             // Update the lead record with current assignment
+            // Note: assigned_at needs special handling with NOW() which update_data doesn't support
             $stmt = $this->pdo->prepare("
                 UPDATE leads 
-                SET assigned_to = ?, assigned_by = ?, assigned_at = NOW(), assignment_comment = ?
-                WHERE id = ?
+                SET assigned_to = :assigned_to, assigned_by = :assigned_by, assigned_at = NOW(), assignment_comment = :assignment_comment
+                WHERE id = :id
             ");
-            $stmt->execute([$assignedTo, $assignedBy, $comment, $leadId]);
+            $stmt->execute([
+                'assigned_to' => $assignedTo,
+                'assigned_by' => $assignedBy,
+                'assignment_comment' => $comment,
+                'id' => $leadId
+            ]);
 
             $this->pdo->commit();
             return true;
@@ -51,6 +61,12 @@ class LeadAssignmentModel extends Model {
      */
     public function bulkAssignLeads($leadIds, $assignedTo, $assignedBy, $comment = '') {
         $results = [];
+        
+        // Ensure $leadIds is an array
+        if (!is_array($leadIds)) {
+            error_log("LeadAssignmentModel::bulkAssignLeads - leadIds is not an array: " . gettype($leadIds));
+            return $results;
+        }
         
         foreach ($leadIds as $leadId) {
             $results[$leadId] = $this->assignLead($leadId, $assignedTo, $assignedBy, $comment);
@@ -79,7 +95,7 @@ class LeadAssignmentModel extends Model {
             ORDER BY la.assigned_at DESC
         ");
         $stmt->execute([$leadId]);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -104,7 +120,7 @@ class LeadAssignmentModel extends Model {
             WHERE l.id = ? AND l.assigned_to IS NOT NULL
         ");
         $stmt->execute([$leadId]);
-        return $stmt->fetch();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -181,7 +197,7 @@ class LeadAssignmentModel extends Model {
         $params[] = $limit;
         $params[] = $offset;
         $stmt->execute($params);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -236,7 +252,7 @@ class LeadAssignmentModel extends Model {
             WHERE $whereClause
         ");
         $stmt->execute($params);
-        $result = $stmt->fetch();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return (int)$result['count'];
     }
 
@@ -252,7 +268,7 @@ class LeadAssignmentModel extends Model {
             ORDER BY full_name, username
         ");
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -266,16 +282,17 @@ class LeadAssignmentModel extends Model {
             $this->pdo->beginTransaction();
 
             // Deactivate current assignment
-            $stmt = $this->pdo->prepare("UPDATE lead_assignments SET is_active = 0 WHERE lead_id = ? AND is_active = 1");
-            $stmt->execute([$leadId]);
+            $updateData = ['is_active' => 0];
+            $this->update_data('lead_assignments', $updateData, "lead_id = {$leadId} AND is_active = 1");
 
             // Clear assignment from leads table
-            $stmt = $this->pdo->prepare("
-                UPDATE leads 
-                SET assigned_to = NULL, assigned_by = NULL, assigned_at = NULL, assignment_comment = NULL
-                WHERE id = ?
-            ");
-            $stmt->execute([$leadId]);
+            $leadUpdateData = [
+                'assigned_to' => NULL,
+                'assigned_by' => NULL,
+                'assigned_at' => NULL,
+                'assignment_comment' => NULL
+            ];
+            $this->update_data('leads', $leadUpdateData, "id = {$leadId}");
 
             $this->pdo->commit();
             return true;
@@ -322,7 +339,7 @@ class LeadAssignmentModel extends Model {
             WHERE $whereClause
         ");
         $stmt->execute($params);
-        return $stmt->fetch();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
 ?>

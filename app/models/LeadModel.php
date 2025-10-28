@@ -14,18 +14,19 @@ class LeadModel extends Model {
             $defaultStatus = $statusModel->getDefaultStatus();
             $data['status_id'] = $defaultStatus ? $defaultStatus['id'] : null;
         }
+ 
 
         $stmt = $this->pdo->prepare("
         INSERT INTO leads (
             lead_id, name, company, email, phone, linkedin, website, clutch,
             sdr_id, duplicate_status, notes, created_by,
-              lead_owner, contact_name, job_title, industry, lead_source_id,
+            lead_owner, contact_name, job_title, industry, lead_source_id,
             tier, lead_status, insta, social_profile, address, description_information,
-            whatsapp, next_step, other, status, status_id, country, sdr_name
+            whatsapp, next_step, other, status_id, country, sdr_name
         )
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ");
-    
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ");
+        
         $stmt->execute([
             $data['lead_id'], $data['name'], $data['company'], $data['email'], $data['phone'],
             $data['linkedin'], $data['website'], $data['clutch'],
@@ -44,12 +45,11 @@ class LeadModel extends Model {
             $data['whatsapp'] ?? null,
             $data['next_step'] ?? null,
             $data['other'] ?? null,
-            $data['status'] ?? 'New Lead',
             $data['status_id'] ?? null,
             $data['country'] ?? null,
             $data['sdr_name'] ?? null
         ]);
-
+    
         $leadId = $this->pdo->lastInsertId();
         
         // Log initial status if it's not the default status
@@ -76,7 +76,7 @@ class LeadModel extends Model {
             UPDATE leads SET
                 name=?, company=?, email=?, phone=?, linkedin=?, website=?, clutch=?, sdr_id=?, duplicate_status=?, notes=?,
 lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?, lead_status=?,
-                insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?, status=?, status_id=?, country=?, sdr_name=?,
+                insta=?, social_profile=?, address=?, description_information=?, whatsapp=?, next_step=?, other=?,  status_id=?, country=?, sdr_name=?,
                 updated_at=NOW()
             WHERE id=?
         ");
@@ -97,8 +97,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             $data['description_information'] ?? null,
             $data['whatsapp'] ?? null,
             $data['next_step'] ?? null,
-            $data['other'] ?? null,
-            $data['status'] ?? null,
+            $data['other'] ?? null, 
             $data['status_id'] ?? null,
             $data['country'] ?? null,
             $data['sdr_name'] ?? null,
@@ -190,8 +189,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 $params[] = '%' . $fieldValue . '%';
             }
         }
-        // pr( $filters['date_from']);
-        // pr( $filters['date_to'],1);
+        
         if(!empty($filters['sdr_id'])){ $where[]='l.sdr_id = ?'; $params[] = $filters['sdr_id']; }
         if(!empty($filters['duplicate_status'])){ $where[]='l.duplicate_status = ?'; $params[] = $filters['duplicate_status']; }
         if(!empty($filters['country'])){ $where[]='l.country = ?'; $params[] = $filters['country']; }
@@ -509,7 +507,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
                 LEFT JOIN users u ON l.sdr_id = u.sdr_id 
-                WHERE LOWER(l.email) = LOWER(?) AND l.id != ?
+                WHERE LOWER(l.email) = LOWER(?) AND l.id != ? AND deleted_at is null
             ');
             $stmt->execute([$lead['email'], $leadId]);
             $emailDups = $stmt->fetchAll();
@@ -522,12 +520,12 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         // Check for duplicates based on phone
         if (!empty($lead['phone'])) {
             $normalizedPhone = normalize_phone($lead['phone']);
-            // pr( $normalizedPhone ,1);
+
             $stmt = $this->pdo->prepare('
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
                 LEFT JOIN users u ON l.sdr_id = u.sdr_id 
-                WHERE REPLACE(l.phone, " ", "") = ? AND l.id != ?
+                WHERE REPLACE(l.phone, " ", "") = ? AND l.id != ? AND deleted_at is null
             ');
             $stmt->execute([$normalizedPhone, $leadId]);
             $phoneDups = $stmt->fetchAll();
@@ -542,7 +540,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 SELECT l.*, u.username as sdr_name 
                 FROM leads l 
                 LEFT JOIN users u ON l.sdr_id = u.sdr_id 
-                WHERE LOWER(l.linkedin) = LOWER(?) AND l.id != ?
+                WHERE LOWER(l.linkedin) = LOWER(?) AND l.id != ? AND deleted_at is null
             ');
             $stmt->execute([$lead['linkedin'], $leadId]);
             $linkedinDups = $stmt->fetchAll();
@@ -557,7 +555,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             SELECT l.*, u.username as sdr_name 
                 FROM leads l 
                 LEFT JOIN users u ON l.sdr_id = u.sdr_id 
-                WHERE LOWER(l.website) = LOWER(?) AND l.id != ?
+                WHERE LOWER(l.website) = LOWER(?) AND l.id != ? AND deleted_at is null
                 ');
                 $stmt->execute([$lead['website'], $leadId]);
                 $websiteDups = $stmt->fetchAll();
@@ -572,7 +570,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             SELECT l.*, u.username as sdr_name 
             FROM leads l 
             LEFT JOIN users u ON l.sdr_id = u.id 
-                WHERE LOWER(l.clutch) = LOWER(?) AND l.id != ?
+                WHERE LOWER(l.clutch) = LOWER(?) AND l.id != ? AND deleted_at is null
                 ');
                 $stmt->execute([$lead['clutch'], $leadId]);
                 $clutchDups = $stmt->fetchAll();
@@ -603,6 +601,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             if (!$primaryLead) {
                 throw new Exception('Primary lead not found');
             }
+       
             
             // Get duplicate leads data
             $duplicateLeads = [];
@@ -624,7 +623,6 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 'clutch' => $primaryLead['clutch'],
                 'job_title' => $primaryLead['job_title'],
                 'industry' => $primaryLead['industry'],
-                'lead_source' => $primaryLead['lead_source'],
                 'tier' => $primaryLead['tier'],
                 'lead_status' => $primaryLead['lead_status'],
                 'insta' => $primaryLead['insta'],
@@ -634,12 +632,10 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 'whatsapp' => $primaryLead['whatsapp'],
                 'next_step' => $primaryLead['next_step'],
                 'other' => $primaryLead['other'],
-                'status' => $primaryLead['status'],
                 'country' => $primaryLead['country'],
-                'notes' => $primaryLead['notes'],
-                // 'duplicate_status'=>'unique'
+                'notes' => $primaryLead['notes']
             ];
-            
+             
             // Merge data from duplicates
             foreach ($duplicateLeads as $dup) {
                 foreach ($mergedData as $key => $value) {
@@ -662,7 +658,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
                 if (!empty($primaryLead['created_by'])) {
                     $mergedData['sdr_id'] = $primaryLead['created_by'];
                 }
-            }
+            } 
 
             // Update primary lead with merged data
             $this->update($primaryId, $mergedData);
@@ -710,12 +706,11 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if (!empty($filters['date_from'])) { $where[] = 'date(created_at) >= ?'; $params[] = $filters['date_from']; }
         if (!empty($filters['date_to'])) { $where[] = 'date(created_at) <= ?'; $params[] = $filters['date_to']; }
         $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-        // pr('SELECT COUNT(*) FROM leads' . $whereSql,1);
-        // pr($params,1);
+ 
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM leads' . $whereSql);
         $stmt->execute($params);
         $total = (int)$stmt->fetchColumn();
-        // pr( $total ,1);
+ 
         // Helper to safely append extra condition
         $buildWhere = function(string $extra) use ($whereSql){
             if ($whereSql) return $whereSql . ' AND ' . $extra;
@@ -936,15 +931,15 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             $params[] = $filters['sdr_id'];
         }
         
-        if (!empty($filters['status'])) {
-            $where[] = 'l.status = ?';
-            $params[] = $filters['status'];
-        }
+        // if (!empty($filters['status'])) {
+        //     $where[] = 'l.status = ?';
+        //     $params[] = $filters['status'];
+        // }
         
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
         
         $sql = "
-            SELECT l.id, l.lead_id, l.company, l.name as contact_name, l.website, l.linkedin, l.clutch, l.status
+            SELECT l.id, l.lead_id, l.company, l.name as contact_name, l.website, l.linkedin, l.clutch 
             FROM leads l 
             {$whereClause}
             ORDER BY l.created_at DESC 
@@ -969,10 +964,10 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
             $params[] = $filters['sdr_id'];
         }
         
-        if (!empty($filters['status'])) {
-            $where[] = 'status = ?';
-            $params[] = $filters['status'];
-        }
+        // if (!empty($filters['status'])) {
+        //     $where[] = 'status = ?';
+        //     $params[] = $filters['status'];
+        // }
         
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
         

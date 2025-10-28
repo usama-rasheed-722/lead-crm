@@ -32,7 +32,7 @@ class LeadsQuotaModel extends Model {
             }
             
             // Automatically assign leads to this quota
-            $this->assignLeadsToQuota($quotaId, $statusId, $quotaCount);
+            $this->assignLeadsToQuota($quotaId, $statusId, $quotaCount,$userId);
             
             return $quotaId;
         }
@@ -41,19 +41,38 @@ class LeadsQuotaModel extends Model {
     }
     
     // Assign leads to a quota automatically
-    private function assignLeadsToQuota($quotaId, $statusId, $quotaCount) {
+    private function assignLeadsToQuota($quotaId, $statusId, $quotaCount,$userId) {
         // Get available leads for this status that aren't already assigned to quotas today
+        $stmt = $this->pdo->prepare("SELECT sdr_id from users WHERE id = ? ");
+        $stmt->execute([$userId]);
+        $sdrId = $stmt->fetch(PDO::FETCH_COLUMN); 
+      
         $stmt = $this->pdo->prepare("
-            SELECT l.id 
+                WITH lqcte AS (
+                SELECT 
+                    lq.status_id AS q_status_id,
+                    lqa.lead_id AS q_lead_id,
+                    lqa.assigned_at
+                FROM leads_quota lq
+                LEFT JOIN lead_quota_assignments lqa 
+                    ON lq.id = lqa.leads_quota_id
+            )
+            SELECT 
+                l.*
             FROM leads l
-            LEFT JOIN lead_quota_assignments lqa ON l.id = lqa.lead_id
-            LEFT JOIN leads_quota lq ON lqa.leads_quota_id = lq.id
-            WHERE l.status_id = ? 
-            AND (lq.assigned_date IS NULL OR lq.assigned_date != CURDATE())
+            LEFT JOIN lqcte 
+                ON l.id = lqcte.q_lead_id
+            WHERE 
+                l.sdr_id = ? AND l.status_id = ? 
+                AND (
+                    lqcte.q_lead_id IS NULL              
+                    OR l.status_id != lqcte.q_status_id
+                )
             ORDER BY l.created_at ASC
-            LIMIT ?
+            LIMIT ?;
         ");
-        $stmt->execute([$statusId, $quotaCount]);
+        
+        $stmt->execute([$sdrId,$statusId,  $quotaCount]);
         $leads = $stmt->fetchAll(PDO::FETCH_COLUMN);
         
         // Assign these leads to the quota

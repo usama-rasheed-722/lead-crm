@@ -58,7 +58,7 @@ class LeadAssignmentController extends Controller {
      */
     public function assignLead() {
         require_role(['admin', 'sdr', 'manager']);
-        
+        // single leads 
         // Debug: Log all request data
         error_log("Assignment request - Method: " . $_SERVER['REQUEST_METHOD']);
         error_log("Assignment request - POST data: " . print_r($_POST, true));
@@ -68,40 +68,41 @@ class LeadAssignmentController extends Controller {
             $leadId = (int)$_POST['lead_id'];
             $assignedTo = (int)$_POST['assigned_to'];
             $comment = trim($_POST['comment'] ?? '');
-            $assignedBy = $_SESSION['id'];
+            $assignedBy = $_SESSION['user']['id'];
 
             // Debug: Log all POST data
             error_log("Individual Assignment POST Data: " . print_r($_POST, true));
             error_log("Lead ID: $leadId, Assigned To: $assignedTo, Assigned By: $assignedBy");
-
+            $success_message = '';
+            $error_message = '';
             if ($leadId && $assignedTo) {
                 try {
                     $success = $this->leadAssignmentModel->assignLead($leadId, $assignedTo, $assignedBy, $comment);
                     
                     if ($success) {
-                        $_SESSION['success_message'] = 'Lead assigned successfully!';
+                        $success_message .= '&success=Lead assigned successfully!';
                         error_log("Assignment successful for lead $leadId");
                     } else {
-                        $_SESSION['error_message'] = 'Failed to assign lead. Please try again.';
+                        $error_message .= '&error=Failed to assign lead. Please try again.';
                         error_log("Assignment failed for lead $leadId");
                     }
                 } catch (Exception $e) {
-                    $_SESSION['error_message'] = 'Error assigning lead: ' . $e->getMessage();
+                    $error_message .= '&error=Error assigning lead: ' . $e->getMessage();
                     error_log("Assignment error for lead $leadId: " . $e->getMessage());
                 }
-            } else {
-                $_SESSION['error_message'] = 'Please select a user to assign the lead to.';
+            } else {    
+                $error_message .= '&error=Please select a user to assign the lead to.';
                 error_log("Assignment validation failed - Lead ID: $leadId, Assigned To: $assignedTo");
-            }
+            } 
 
             // Redirect back to the page that initiated the assignment
-            $redirectUrl = $_POST['redirect_url'] ?? 'index.php?action=leads';
-            
+            $redirectUrl = $_POST['redirect_url'] ?? 'index.php?action=lead_view&id=' . $leadId . $success_message . $error_message;
+                    
             // Clean up the redirect URL to avoid issues
             if (strpos($redirectUrl, 'http') === 0) {
                 // If it's a full URL, extract just the path and query
                 $parsedUrl = parse_url($redirectUrl);
-                $redirectUrl = $parsedUrl['path'] ?? 'index.php?action=leads';
+                $redirectUrl = $parsedUrl['path'] ?? 'index.php?action=lead_view&id=' . $leadId . $success_message . $error_message;
                 if (!empty($parsedUrl['query'])) {
                     $redirectUrl .= '?' . $parsedUrl['query'];
                 }
@@ -119,11 +120,17 @@ class LeadAssignmentController extends Controller {
         require_role(['admin', 'sdr', 'manager']);
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $leadIds = $_POST['lead_ids'] ?? [];
+            $leadIdsRaw = $_POST['lead_ids'] ?? [];
             $assignedTo = (int)$_POST['assigned_to'];
             $comment = trim($_POST['comment'] ?? '');
             $assignedBy = $_SESSION['user']['id'];
-            // pr(   $leadIds,1);
+            
+            // Convert lead IDs to array if it's a comma-separated string
+            if (is_string($leadIdsRaw)) {
+                $leadIds = array_filter(array_map('trim', explode(',', $leadIdsRaw)));
+            } else {
+                $leadIds = $leadIdsRaw;
+            }
        
             if (!empty($leadIds) && $assignedTo) {
                 try {
@@ -132,7 +139,7 @@ class LeadAssignmentController extends Controller {
                     $successCount = count(array_filter($results));
                     $totalCount = count($results);
                     
-                    error_log("Bulk assignment attempt - Leads: " . implode(',', $leadIds) . ", Assigned To: $assignedTo, Success: $successCount/$totalCount");
+                    error_log("Bulk assignment attempt - Leads: " . (is_array($leadIds) ? implode(',', $leadIds) : $leadIds) . ", Assigned To: $assignedTo, Success: $successCount/$totalCount");
                     
                     if ($successCount > 0) {
                         $_SESSION['success_message'] = "Successfully assigned $successCount out of $totalCount leads!";
@@ -145,7 +152,7 @@ class LeadAssignmentController extends Controller {
                 }
             } else {
                 $_SESSION['error_message'] = 'Please select leads and a user to assign them to.';
-                error_log("Bulk assignment validation failed - Lead IDs: " . implode(',', $leadIds) . ", Assigned To: $assignedTo");
+                error_log("Bulk assignment validation failed - Lead IDs: " . (is_array($leadIds) ? implode(',', $leadIds) : $leadIds) . ", Assigned To: $assignedTo");
             }
 
             // Redirect back to the page that initiated the assignment

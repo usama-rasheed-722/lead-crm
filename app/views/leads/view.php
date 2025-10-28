@@ -779,7 +779,7 @@ if (assignForm) {
                     <input type="hidden" id="assignLeadId" name="lead_id">
                     <div class="mb-3">
                         <label for="assignTo" class="form-label">Assign To</label>
-                        <select class="form-select" id="assignTo" name="assigned_to" required>
+                        <select class="form-select" id="assignTo"  name="assigned_to" required>
                             <option value="">Select User</option>
                             <?php
                             // Get users for assignment dropdown
