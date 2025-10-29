@@ -7,18 +7,18 @@ try {
     $pdo = new PDO("mysql:host=localhost", 'root', '');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // Read and execute schema
-    $schema = file_get_contents(__DIR__ . '/dbschema.sql');
-    $statements = explode(';', $schema);
+    // // Read and execute schema
+    // $schema = file_get_contents(__DIR__ . '/dbschema.sql');
+    // $statements = explode(';', $schema);
     
-    foreach ($statements as $statement) {
-        $statement = trim($statement);
-        if (!empty($statement)) {
-            $pdo->exec($statement);
-        }
-    }
+    // foreach ($statements as $statement) {
+    //     $statement = trim($statement);
+    //     if (!empty($statement)) {
+    //         $pdo->exec($statement);
+    //     }
+    // }
     
-    echo "Database schema created successfully!\n";
+    // echo "Database schema created successfully!\n";
     
     // Insert demo users
     $users = [
