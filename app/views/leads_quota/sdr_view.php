@@ -252,8 +252,10 @@
                                             </button>
                                             <button type="button" class="btn btn-outline-info update-status-btn" 
                                                     data-assignment-id="<?= $lead['assignment_id'] ?>" 
-                                                    data-lead-id="<?= $lead['id'] ?>"
-                                                    title="Update Status">
+                                                    data-lead-id-quick="<?= $lead['id'] ?>"
+                                                    title="Update Status"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#updateStatusModal">
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                         <?php else: ?>
@@ -322,26 +324,41 @@
                 <h5 class="modal-title" id="updateStatusModalLabel">Update Lead Status</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="updateStatusForm">
+            <form method="POST" action="index.php?action=update_status_with_custom_fields" id="updateStatusForm">
                 <div class="modal-body">
+                    <input type="hidden" name="lead_id" id="lead_id" >
+                    
                     <div class="mb-3">
-                        <label for="new_status_id" class="form-label">New Status</label>
-                        <select class="form-select" id="new_status_id" name="new_status_id" required>
+                        <label for="quick_new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="quick_new_status_id" name="new_status_id" required>
                             <option value="">Select Status</option>
-                            <!-- Status options will be loaded dynamically -->
+                            <?php
+                            $statusModel = new StatusModel();
+                            $statuses = $statusModel->all();
+                            foreach ($statuses as $status): 
+                                    $customFields = $statusModel->getCustomFieldsByName($status['name']);
+                                    $hasFields = count($customFields) > 0;
+                            ?>
+                                <option value="<?= $status['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                    <?= htmlspecialchars($status['name']) ?><?= $hasFields ? ' 📝' : '' ?>
+                                </option>
+                            <?php
+                            endforeach;
+                            ?>
                         </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <span class="text-muted">📝 indicates statuses that require additional information</span>
+                        </div>
                     </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        This will update the lead status and mark it as completed in your quota.
-                    </div>
+                    
+                    <!-- Dynamic Custom Fields Container -->
+                    <div id="quickCustomFieldsContainer"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Status</button>
                 </div>
-                <input type="hidden" name="lead_id" id="updateLeadId">
-                <input type="hidden" name="assignment_id" id="updateAssignmentId">
             </form>
         </div>
     </div>
@@ -350,9 +367,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const updateStatusModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
-    const updateStatusForm = document.getElementById('updateStatusForm');
     const refreshQuotaBtn = document.getElementById('refreshQuotaBtn');
     const columnsBtn = document.getElementById('columnsBtn');
+    const quickCustomFieldsContainer = document.getElementById('quickCustomFieldsContainer');
+    const quickStatusSelect = document.getElementById('quick_new_status_id');
+
     
     // Cookie helpers for column management
     function setCookie(name, value, days) {
@@ -533,58 +552,170 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
-    // Handle update status button
-    document.querySelectorAll('.update-status-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const leadId = this.getAttribute('data-lead-id');
-            const assignmentId = this.getAttribute('data-assignment-id');
-            
-            document.getElementById('updateLeadId').value = leadId;
-            document.getElementById('updateAssignmentId').value = assignmentId;
-            
-            // Load status options
-            fetch('index.php?action=get_statuses')
-                .then(response => response.json())
-                .then(data => {
-                    const statusSelect = document.getElementById('new_status_id');
-                    statusSelect.innerHTML = '<option value="">Select Status</option>';
-                    data.statuses.forEach(status => {
-                        statusSelect.innerHTML += `<option value="${status.id}">${status.name}</option>`;
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading statuses:', error);
+
+
+
+    // status change fields added
+
+
+        function createCustomFieldHtml(field) {
+        const required = field.is_required ? 'required' : '';
+        const requiredAsterisk = field.is_required ? ' <span class="text-danger">*</span>' : '';
+        const fieldId = `custom_field_${field.field_name}`;
+        const fieldName = `custom_field_${field.field_name}`;
+        
+        let inputHtml = '';
+        
+        switch (field.field_type) {
+            case 'textarea':
+                inputHtml = `<textarea id="${fieldId}" class="form-control" name="${fieldName}" ${required}></textarea>`;
+                break;
+            case 'select':
+                const options = field.field_options ? field.field_options.split('\n') : [];
+                inputHtml = `<select id="${fieldId}" class="form-select" name="${fieldName}" ${required}>`;
+                inputHtml += '<option value="">Select...</option>';
+                options.forEach(option => {
+                    inputHtml += `<option value="${option.trim()}">${option.trim()}</option>`;
                 });
+                inputHtml += '</select>';
+                break;
+            case 'date':
+                inputHtml = `<input type="date" id="${fieldId}" class="form-control" name="${fieldName}" ${required}>`;
+                break;
+            case 'number':
+                inputHtml = `<input type="number" id="${fieldId}" class="form-control" name="${fieldName}" ${required}>`;
+                break;
+            case 'email':
+                inputHtml = `<input type="email" id="${fieldId}" class="form-control" name="${fieldName}" ${required}>`;
+                break;
+            case 'url':
+                inputHtml = `<input type="url" id="${fieldId}" class="form-control" name="${fieldName}" ${required}>`;
+                break;
+            default: // text
+                inputHtml = `<input type="text" id="${fieldId}" class="form-control" name="${fieldName}" ${required}>`;
+        }
+        
+        return `
+            <div class="custom-field-container mb-3">
+                <label for="${fieldId}" class="form-label fw-bold">
+                    ${field.field_label}${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${field.is_required ? '<div class="form-text text-muted mt-2"><i class="fas fa-asterisk text-danger me-1"></i>This field is required</div>' : ''}
+            </div>
+        `;
+    }
+
+        // Handle quick status change modal
+        if (quickStatusSelect) {
+        quickStatusSelect.addEventListener('change', function() {
+            const selectedStatusId = this.value;
+            const selectedStatusName = this.selectedOptions[0]?.text?.replace(' 📝', '') || '';
             
-            updateStatusModal.show();
-        });
-    });
-    
-    // Handle update status form submission
-    updateStatusForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        
-        fetch('index.php?action=leads_quota_update_lead_status', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateStatusModal.hide();
-                location.reload();
-            } else {
-                alert('Failed to update lead status: ' + (data.error || 'Unknown error'));
+            // Clear previous custom fields
+            quickCustomFieldsContainer.innerHTML = '';
+            
+            if (selectedStatusId) {
+                // Show loading indicator
+                quickCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
+                
+                // Fetch custom fields for the selected status
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        quickCustomFieldsContainer.innerHTML = '';
+                        
+                        if (data.customFields && data.customFields.length > 0) {
+                            // Add header for custom fields
+                            quickCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-3"><i class="fas fa-info-circle me-2"></i>This status requires additional information:</div>');
+                            
+                            data.customFields.forEach(field => {
+                                const fieldHtml = createCustomFieldHtml(field);
+                                quickCustomFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+                            });
+                        } else {
+                            // Show message when no custom fields
+                            quickCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-success mb-3"><i class="fas fa-check-circle me-2"></i>No additional fields required for this status.</div>');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching custom fields:', error);
+                        quickCustomFieldsContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading custom fields. Please try again.</div>';
+                    });
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while updating the status');
         });
+    }
+
+
+    // Handle update status button clicks using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.update-status-btn')) {
+            const btn = e.target.closest('.update-status-btn');
+            const leadId = btn.getAttribute('data-lead-id-quick');
+            const leadIdInput = document.getElementById('lead_id');
+            if (leadIdInput && leadId) {
+                leadIdInput.value = leadId;
+            }
+            // Clear custom fields when opening modal
+            quickCustomFieldsContainer.innerHTML = '';
+            // Reset status select
+            if (quickStatusSelect) {
+                quickStatusSelect.value = '';
+            }
+        }
     });
+
+    // Handle form submission to ensure all fields are captured
+    const updateStatusForm = document.getElementById('updateStatusForm');
+    if (updateStatusForm) {
+        updateStatusForm.addEventListener('submit', function(e) {
+            // Validate required custom fields
+            const customFields = this.querySelectorAll('#quickCustomFieldsContainer [required]');
+            let isValid = true;
+            const missingFields = [];
+
+            customFields.forEach(function(field) {
+                if (!field.value || field.value.trim() === '') {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                    const label = field.closest('.custom-field-container')?.querySelector('label');
+                    if (label) {
+                        missingFields.push(label.textContent.replace(/\s*\*/g, '').trim());
+                    }
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate lead_id
+            const leadId = document.getElementById('lead_id').value;
+            if (!leadId) {
+                isValid = false;
+                alert('Error: Lead ID is missing. Please try again.');
+                e.preventDefault();
+                return false;
+            }
+
+            // Validate status selection
+            const statusId = document.getElementById('quick_new_status_id').value;
+            if (!statusId) {
+                isValid = false;
+                alert('Please select a status.');
+                e.preventDefault();
+                return false;
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields:\n- ' + missingFields.join('\n- '));
+                return false;
+            }
+
+            // All validations passed - form will submit normally
+            return true;
+        });
+    }
+    
 });
 </script>
 

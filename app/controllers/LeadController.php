@@ -711,10 +711,10 @@ class LeadController extends Controller {
 
     // Update status with custom fields
     public function updateStatusWithCustomFields() {
+        // dd($_POST,1);
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('index.php?action=leads');
         }
-        
         $user = auth_user();
         $leadId = (int)($_POST['lead_id'] ?? 0);
         $newStatusId = (int)($_POST['new_status_id'] ?? 0);

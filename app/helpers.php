@@ -32,7 +32,7 @@ return preg_replace('/[^0-9+]/', '', $p);
 }
 
 
-function pr(...$pre){
+function dd(...$pre){
     echo "<pre>";
     print_r($pre);
 
