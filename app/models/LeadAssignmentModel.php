@@ -172,6 +172,52 @@ class LeadAssignmentModel extends Model {
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
+        
+        // SDR filter
+        if (!empty($filters['sdr_id'])) {
+            $whereConditions[] = "l.sdr_id = ?";
+            $params[] = $filters['sdr_id'];
+        }
+        
+        // Duplicate status filter
+        if (!empty($filters['duplicate_status'])) {
+            $whereConditions[] = "l.duplicate_status = ?";
+            $params[] = $filters['duplicate_status'];
+        }
+        
+        // Date filter (created date)
+        if (!empty($filters['date_from'])) {
+            $whereConditions[] = "DATE(l.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $whereConditions[] = "DATE(l.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        
+        // Lead source filter
+        if (!empty($filters['lead_source_id'])) {
+            $whereConditions[] = "l.lead_source_id = ?";
+            $params[] = $filters['lead_source_id'];
+        }
+        
+        // Field-specific search
+        if (!empty($filters['field_type']) && !empty($filters['field_value'])) {
+            $fieldType = $filters['field_type'];
+            $fieldValue = $filters['field_value'];
+            
+            // Validate the field type using LeadModel's method
+            require_once 'app/models/LeadModel.php';
+            $leadModel = new LeadModel();
+            $availableFields = $leadModel->getAvailableFields();
+            $validFields = array_column($availableFields, 'value');
+            
+            if (in_array($fieldType, $validFields)) {
+                $whereConditions[] = "l.{$fieldType} LIKE ?";
+                $params[] = '%' . $fieldValue . '%';
+            }
+        }
 
         $whereClause = implode(' AND ', $whereConditions);
 
@@ -242,6 +288,52 @@ class LeadAssignmentModel extends Model {
             $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
+        }
+        
+        // SDR filter
+        if (!empty($filters['sdr_id'])) {
+            $whereConditions[] = "l.sdr_id = ?";
+            $params[] = $filters['sdr_id'];
+        }
+        
+        // Duplicate status filter
+        if (!empty($filters['duplicate_status'])) {
+            $whereConditions[] = "l.duplicate_status = ?";
+            $params[] = $filters['duplicate_status'];
+        }
+        
+        // Date filter (created date)
+        if (!empty($filters['date_from'])) {
+            $whereConditions[] = "DATE(l.created_at) >= ?";
+            $params[] = $filters['date_from'];
+        }
+        
+        if (!empty($filters['date_to'])) {
+            $whereConditions[] = "DATE(l.created_at) <= ?";
+            $params[] = $filters['date_to'];
+        }
+        
+        // Lead source filter
+        if (!empty($filters['lead_source_id'])) {
+            $whereConditions[] = "l.lead_source_id = ?";
+            $params[] = $filters['lead_source_id'];
+        }
+        
+        // Field-specific search
+        if (!empty($filters['field_type']) && !empty($filters['field_value'])) {
+            $fieldType = $filters['field_type'];
+            $fieldValue = $filters['field_value'];
+            
+            // Validate the field type using LeadModel's method
+            require_once 'app/models/LeadModel.php';
+            $leadModel = new LeadModel();
+            $availableFields = $leadModel->getAvailableFields();
+            $validFields = array_column($availableFields, 'value');
+            
+            if (in_array($fieldType, $validFields)) {
+                $whereConditions[] = "l.{$fieldType} LIKE ?";
+                $params[] = '%' . $fieldValue . '%';
+            }
         }
 
         $whereClause = implode(' AND ', $whereConditions);

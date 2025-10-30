@@ -23,13 +23,20 @@ class LeadAssignmentController extends Controller {
     public function assignedLeads() {
         require_role(['admin', 'sdr', 'manager']);
         
+        $search = $_GET['search'] ?? '';
         $filters = [
             'assigned_by' => $_GET['assigned_by'] ?? '',
             'status_id' => $_GET['status_id'] ?? '',
             'assigned_date_from' => $_GET['assigned_date_from'] ?? '',
             'assigned_date_to' => $_GET['assigned_date_to'] ?? '',
             'assigned_to' => $_GET['assigned_to'] ?? '',
-            'search' => $_GET['search'] ?? ''
+            'sdr_id' => $_GET['sdr_id'] ?? '',
+            'duplicate_status' => $_GET['duplicate_status'] ?? '',
+            'date_from' => $_GET['date_from'] ?? '',
+            'date_to' => $_GET['date_to'] ?? '',
+            'lead_source_id' => $_GET['lead_source_id'] ?? '',
+            'field_type' => $_GET['field_type'] ?? '',
+            'field_value' => $_GET['field_value'] ?? ''
         ];
 
         // Role-based filtering: SDRs can only see leads assigned to them
@@ -49,7 +56,15 @@ class LeadAssignmentController extends Controller {
         $statuses = $this->statusModel->all();
         $users = $this->leadAssignmentModel->getUsersForAssignment();
         $statistics = $this->leadAssignmentModel->getAssignmentStatistics($filters);
-        // dd(1);
+        
+        // Load lead sources for filters
+        require_once 'app/models/LeadSourceModel.php';
+        $leadSourceModel = new LeadSourceModel();
+        $leadSources = $leadSourceModel->getActive();
+        
+        // Get available fields from leads table
+        $availableFields = $this->leadModel->getAvailableFields();
+        
         $this->view('lead_assignment/assigned_leads', [
             'leads' => $leads,
             'totalLeads' => $totalLeads,
@@ -58,6 +73,9 @@ class LeadAssignmentController extends Controller {
             'users' => $users,
             'statistics' => $statistics,
             'filters' => $filters,
+            'leadSources' => $leadSources,
+            'availableFields' => $availableFields,
+            'search' => $search,
             'page' => $page,
             'limit' => $limit,
             'offset' => $offset
@@ -321,14 +339,27 @@ class LeadAssignmentController extends Controller {
     public function exportAssignedLeads() {
         require_role(['admin', 'sdr', 'manager']);
         
+        $search = $_GET['search'] ?? '';
         $filters = [
             'assigned_by' => $_GET['assigned_by'] ?? '',
             'status_id' => $_GET['status_id'] ?? '',
             'assigned_date_from' => $_GET['assigned_date_from'] ?? '',
             'assigned_date_to' => $_GET['assigned_date_to'] ?? '',
             'assigned_to' => $_GET['assigned_to'] ?? '',
-            'search' => $_GET['search'] ?? ''
+            'sdr_id' => $_GET['sdr_id'] ?? '',
+            'duplicate_status' => $_GET['duplicate_status'] ?? '',
+            'date_from' => $_GET['date_from'] ?? '',
+            'date_to' => $_GET['date_to'] ?? '',
+            'lead_source_id' => $_GET['lead_source_id'] ?? '',
+            'field_type' => $_GET['field_type'] ?? '',
+            'field_value' => $_GET['field_value'] ?? ''
         ];
+        
+        // Role-based filtering: SDRs can only see leads assigned to them
+        $currentUser = auth_user();
+        if ($currentUser['role'] === 'sdr') {
+            $filters['assigned_to'] = $currentUser['id']; // Force filter to current SDR
+        }
 
         // Get all assigned leads (no pagination for export)
         $leads = $this->leadAssignmentModel->getAssignedLeads($filters, 10000, 0);

@@ -101,19 +101,86 @@
 </div>
 
 <!-- Search and Filters -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
-    </div>
-    <div class="card-body">
+<div class="search-form mb-4">
         <form method="GET" action="index.php">
             <input type="hidden" name="action" value="assigned_leads">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label for="search" class="form-label">Search</label>
+                <label for="search" class="form-label">Search All Fields</label>
                     <input type="text" class="form-control" id="search" name="search" 
-                           value="<?= htmlspecialchars($filters['search'] ?? '') ?>" 
-                           placeholder="Search leads...">
+                       value="<?= htmlspecialchars($search ?? '') ?>" 
+                       placeholder="Search across all fields...">
+            </div>
+            <div class="col-md-3">
+                <label for="field_search" class="form-label">Search Specific Field</label>
+                <div class="input-group">
+                    <select class="form-select" id="field_type" name="field_type" style="max-width: 150px;">
+                        <option value="">Select Field</option>
+                        <?php if (!empty($availableFields)): foreach ($availableFields as $field): ?>
+                            <option value="<?= htmlspecialchars($field['value']) ?>" <?= ($filters['field_type'] ?? '') === $field['value'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($field['label']) ?>
+                            </option>
+                        <?php endforeach; endif; ?>
+                    </select>
+                    <input type="text" class="form-control" id="field_value" name="field_value" 
+                           value="<?= htmlspecialchars($filters['field_value'] ?? '') ?>" 
+                           placeholder="Enter value...">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label for="sdr_id" class="form-label">SDR</label>
+                <select class="form-select" id="sdr_id" name="sdr_id">
+                    <option value="">All SDRs</option>
+                    <?php foreach ($users as $user): ?>
+                        <?php if ($user['role'] === 'sdr'): ?>
+                            <option value="<?= $user['sdr_id'] ?? $user['id'] ?>" <?= ($filters['sdr_id'] ?? '') == ($user['sdr_id'] ?? $user['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                            </option>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="duplicate_status" class="form-label">Duplicate</label>
+                <select class="form-select" id="duplicate_status" name="duplicate_status">
+                    <option value="">All</option>
+                    <option value="unique" <?= ($filters['duplicate_status'] ?? '') === 'unique' ? 'selected' : '' ?>>✅ Unique</option>
+                    <option value="duplicate" <?= ($filters['duplicate_status'] ?? '') === 'duplicate' ? 'selected' : '' ?>>🔁 Duplicate</option>
+                    <option value="incomplete" <?= ($filters['duplicate_status'] ?? '') === 'incomplete' ? 'selected' : '' ?>>⚠️ Incomplete</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status_id" class="form-label">Status</label>
+                <select class="form-select" id="status_id" name="status_id">
+                    <option value="">All Statuses</option>
+                    <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
+                        <option value="<?= $st['id'] ?>" <?= (isset($filters['status_id']) && $filters['status_id'] == $st['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($st['name']) ?>
+                        </option>
+                    <?php endforeach; endif; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="lead_source_id" class="form-label">Lead Source</label>
+                <select class="form-select" id="lead_source_id" name="lead_source_id">
+                    <option value="">All Sources</option>
+                    <?php if (!empty($leadSources)): foreach ($leadSources as $source): ?>
+                        <option value="<?= htmlspecialchars($source['id']) ?>" 
+                                <?= ($filters['lead_source_id'] ?? '') == $source['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($source['name']) ?>
+                        </option>
+                    <?php endforeach; endif; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="date_from" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" 
+                       value="<?= htmlspecialchars($filters['date_from'] ?? '') ?>">
+            </div>
+            <div class="col-md-2">
+                <label for="date_to" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" 
+                       value="<?= htmlspecialchars($filters['date_to'] ?? '') ?>">
                 </div>
                 <div class="col-md-3">
                     <label for="assigned_by" class="form-label">Assigned By</label>
@@ -140,17 +207,6 @@
                 </div>
                 <?php endif; ?>
                 <div class="col-md-3">
-                    <label for="status_id" class="form-label">Status</label>
-                    <select class="form-select" id="status_id" name="status_id">
-                        <option value="">All Statuses</option>
-                        <?php foreach ($statuses as $status): ?>
-                            <option value="<?= $status['id'] ?>" <?= ($filters['status_id'] ?? '') == $status['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($status['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-3">
                     <label for="assigned_date_from" class="form-label">Assigned Date From</label>
                     <input type="date" class="form-control" id="assigned_date_from" name="assigned_date_from" 
                            value="<?= htmlspecialchars($filters['assigned_date_from'] ?? '') ?>">
@@ -160,38 +216,45 @@
                     <input type="date" class="form-control" id="assigned_date_to" name="assigned_date_to" 
                            value="<?= htmlspecialchars($filters['assigned_date_to'] ?? '') ?>">
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Apply Filters
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search me-2"></i>Search
                         </button>
                         <a href="index.php?action=assigned_leads" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>Clear Filters
+                    <i class="fas fa-times me-2"></i>Clear
                         </a>
-                    </div>
                 </div>
             </div>
         </form>
-    </div>
 </div>
 
 <!-- Assigned Leads Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <i class="fas fa-list me-2"></i>
-            <?php if (auth_user()['role'] === 'sdr'): ?>
-                My Assigned Leads
-            <?php else: ?>
-                Assigned Leads
-            <?php endif; ?>
-            <span class="badge bg-primary"><?= number_format($totalLeads) ?></span>
-        </h5>
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="toggleColumnVisibility()">
+        <h5 class="mb-0">Assigned Leads (<?= number_format($totalLeads) ?> found)</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-warning me-2" id="clearSelectionBtn" disabled>
+                <i class="fas fa-times me-1"></i><span id="selectionCount">0</span>  Clear Selection
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="columnsBtn">
                 <i class="fas fa-columns me-1"></i>Columns
             </button>
+            <button type="button" class="btn btn-sm btn-primary me-2" id="bulkUpdateBtn" disabled>
+                <i class="fas fa-edit me-1"></i>Bulk Update Status
+            </button>
+            <button type="button" class="btn btn-sm btn-info me-2" id="bulkReassignBtn" disabled>
+                <i class="fas fa-user-edit me-1"></i>Reassign Selected
+            </button>
+            <?php if (auth_user()['role'] !== 'sdr'): ?>
+            <button type="button" class="btn btn-sm btn-danger me-2" id="bulkUnassignBtn" disabled>
+                <i class="fas fa-user-times me-1"></i>Unassign Selected
+            </button>
+            <?php endif; ?>
+            <a href="index.php?action=export_assigned_leads&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
+                <i class="fas fa-download me-1"></i>Export CSV
+            </a>
             <button type="button" class="btn btn-outline-success btn-sm" onclick="location.reload()">
                 <i class="fas fa-sync-alt me-1"></i>Refresh
             </button>
@@ -210,7 +273,7 @@
                     <thead class="table-light">
                         <tr>
                             <th class="text-center">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
                             </th>
                             <th class="sortable" data-column="lead_id">
                                 Lead ID <i class="fas fa-sort"></i>
@@ -251,34 +314,34 @@
                         <?php foreach ($leads as $lead): ?>
                             <tr>
                                 <td class="text-center">
-                                    <input type="checkbox" class="lead-checkbox" value="<?= $lead['id'] ?>">
+                                    <input type="checkbox" class="form-check-input lead-checkbox" value="<?= $lead['id'] ?>">
                                 </td>
-                                <td>
+                                <td data-column="lead_id">
                                     <a href="index.php?action=lead_view&id=<?= $lead['id'] ?>" class="text-decoration-none">
                                         <?= htmlspecialchars($lead['lead_id']) ?>
                                     </a>
                                 </td>
-                                <td><?= htmlspecialchars($lead['name'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($lead['company'] ?? '') ?></td>
-                                <td>
+                                <td data-column="name"><?= htmlspecialchars($lead['name'] ?? '') ?></td>
+                                <td data-column="company"><?= htmlspecialchars($lead['company'] ?? '') ?></td>
+                                <td data-column="email">
                                     <?php if (!empty($lead['email'])): ?>
                                         <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
                                             <?= htmlspecialchars($lead['email']) ?>
                                         </a>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-column="phone">
                                     <?php if (!empty($lead['phone'])): ?>
                                         <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
                                             <?= htmlspecialchars($lead['phone']) ?>
                                         </a>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-column="status_name">
                                     <span class="badge bg-secondary"><?= htmlspecialchars($lead['status_name'] ?? '') ?></span>
                                 </td>
                                 <?php if (auth_user()['role'] !== 'sdr'): ?>
-                                <td>
+                                <td data-column="assigned_to_name">
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user me-2 text-primary"></i>
                                         <div>
@@ -290,7 +353,7 @@
                                     </div>
                                 </td>
                                 <?php endif; ?>
-                                <td>
+                                <td data-column="assigned_by_name">
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user-tie me-2 text-info"></i>
                                         <div>
@@ -301,7 +364,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td data-column="assigned_at">
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-calendar me-2 text-success"></i>
                                         <div>
@@ -310,7 +373,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td data-column="assignment_comment">
                                     <?php if (!empty($lead['assignment_comment'])): ?>
                                         <span class="text-truncate d-inline-block" style="max-width: 150px;" 
                                               title="<?= htmlspecialchars($lead['assignment_comment']) ?>">
@@ -351,25 +414,6 @@
     </div>
 </div>
 
-<!-- Bulk Actions -->
-<div class="mt-3" id="bulkActions" style="display: none;">
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex align-items-center gap-3">
-                <span class="fw-bold">Bulk Actions:</span>
-                <button type="button" class="btn btn-primary btn-sm" onclick="bulkReassign()">
-                    <i class="fas fa-user-edit me-1"></i>Reassign Selected
-                </button>
-                <?php if (auth_user()['role'] !== 'sdr'): ?>
-                <button type="button" class="btn btn-danger btn-sm" onclick="bulkUnassign()">
-                    <i class="fas fa-user-times me-1"></i>Unassign Selected
-                </button>
-                <?php endif; ?>
-                <span class="text-muted" id="selectedCount">0 leads selected</span>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Pagination -->
 <?php if ($totalPages > 1): ?>
@@ -401,6 +445,62 @@
         </ul>
     </nav>
 <?php endif; ?>
+
+<!-- Bulk Update Status Modal -->
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkUpdateModalLabel">Bulk Update Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="bulkUpdateForm" method="POST" action="index.php?action=bulk_update_status">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="new_status_id" class="form-label">New Status</label>
+                        <select class="form-select" id="new_status_id" name="new_status_id" required>
+                            <option value="">Select Status</option>
+                            <?php if (!empty($statuses)): foreach ($statuses as $st): ?>
+                                <?php
+                                $statusModel = new StatusModel();
+                                $customFields = $statusModel->getCustomFieldsByName($st['name']);
+                                $hasFields = count($customFields) > 0;
+                                ?>
+                                <option value="<?= $st['id'] ?>" data-has-fields="<?= $hasFields ? 'true' : 'false' ?>">
+                                    <?= htmlspecialchars($st['name']) ?><?= $hasFields ? ' 📝' : '' ?>
+                                </option>
+                            <?php endforeach; endif; ?>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            <span class="text-muted">📝 indicates statuses that require additional information</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Custom Fields Container -->
+                    <div id="bulkCustomFieldsContainer"></div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This will update the status for <span id="bulkUpdateSelectedCount">0</span> selected lead(s).
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                </div>
+                <input type="hidden" name="lead_ids" id="bulkUpdateIds">
+                <input type="hidden" name="redirect_url" id="bulkUpdateRedirect">
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Unassign Form -->
+<form id="bulkUnassignForm" method="POST" action="index.php?action=bulk_unassign_leads" style="display: none;">
+    <input type="hidden" name="lead_ids" id="bulkUnassignIds">
+    <input type="hidden" name="redirect_url" id="bulkUnassignRedirect">
+</form>
 
 <!-- Assignment History Modal -->
 <div class="modal fade" id="assignmentHistoryModal" tabindex="-1">
@@ -509,48 +609,439 @@
 </div>
 
 <script>
-// Column visibility management
-function toggleColumnVisibility() {
-    // Implementation for column visibility toggle
-    alert('Column visibility feature will be implemented');
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const leadCheckboxes = document.querySelectorAll('.lead-checkbox');
+    const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+    const bulkReassignBtn = document.getElementById('bulkReassignBtn');
+    const bulkUnassignBtn = document.getElementById('bulkUnassignBtn');
+    const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const selectionCount = document.getElementById('selectionCount');
+    
+    // Cookie helpers
+    function setCookie(name, value, days) {
+        const d = new Date();
+        d.setTime(d.getTime() + (days*24*60*60*1000));
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/";
+    }
+    
+    function getCookie(name) {
+        const cname = name + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1);
+            if (c.indexOf(cname) === 0) return decodeURIComponent(c.substring(cname.length, c.length));
+        }
+        return "";
+    }
+
+    // Persistent selection across pages
+    const SELECT_COOKIE = 'selected_assigned_lead_ids';
+    function getSelectedSet() {
+        try { return new Set(JSON.parse(getCookie(SELECT_COOKIE) || '[]')); } catch(e) { return new Set(); }
+    }
+    
+    function saveSelectedSet(set) {
+        setCookie(SELECT_COOKIE, JSON.stringify(Array.from(set)), 7);
+    }
+    
+    const selectedSet = getSelectedSet();
+
+    // Restore selection state on current page
+    leadCheckboxes.forEach(cb => {
+        if (selectedSet.has(cb.value)) cb.checked = true;
+    });
+    updateBulkButtons();
+    updateSelectAllState();
 
 // Select all functionality
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.lead-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-    
-    updateBulkActions();
-}
-
-// Update bulk actions visibility
-function updateBulkActions() {
-    const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
-    const bulkActions = document.getElementById('bulkActions');
-    const selectedCount = document.getElementById('selectedCount');
-    
-    if (checkboxes.length > 0) {
-        bulkActions.style.display = 'block';
-        selectedCount.textContent = `${checkboxes.length} lead${checkboxes.length > 1 ? 's' : ''} selected`;
-    } else {
-        bulkActions.style.display = 'none';
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            leadCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+                if (this.checked) { selectedSet.add(checkbox.value); }
+                else { selectedSet.delete(checkbox.value); }
+            });
+            saveSelectedSet(selectedSet);
+            updateBulkButtons();
+        });
     }
-}
 
-// Add event listeners to checkboxes
-document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.lead-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkActions);
+    // Individual checkbox change
+    leadCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) { selectedSet.add(this.value); } else { selectedSet.delete(this.value); }
+            saveSelectedSet(selectedSet);
+            updateBulkButtons();
+            updateSelectAllState();
+        });
     });
-});
+
+    function updateBulkButtons() {
+        const count = selectedSet.size;
+        if (bulkUpdateBtn) bulkUpdateBtn.disabled = count === 0;
+        if (bulkReassignBtn) bulkReassignBtn.disabled = count === 0;
+        if (bulkUnassignBtn) bulkUnassignBtn.disabled = count === 0;
+        if (clearSelectionBtn) clearSelectionBtn.disabled = count === 0;
+        if (selectionCount) selectionCount.textContent = count;
+    }
+
+    function updateSelectAllState() {
+        const checkedBoxes = document.querySelectorAll('.lead-checkbox:checked');
+        const totalBoxes = leadCheckboxes.length;
+        
+        if (selectAllCheckbox) {
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === totalBoxes) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+    } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    // Clear selection functionality
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', function() {
+            selectedSet.clear();
+            saveSelectedSet(selectedSet);
+            
+            // Uncheck all checkboxes on current page
+            leadCheckboxes.forEach(cb => cb.checked = false);
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            
+            updateBulkButtons();
+            updateSelectAllState();
+        });
+    }
+
+    // Bulk update functionality
+    if (bulkUpdateBtn) {
+        bulkUpdateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ids = Array.from(selectedSet);
+            if (ids.length === 0) return;
+            
+            try {
+                const bulkUpdateIds = document.getElementById('bulkUpdateIds');
+                const bulkUpdateSelectedCount = document.getElementById('bulkUpdateSelectedCount');
+                const bulkUpdateRedirect = document.getElementById('bulkUpdateRedirect');
+                const bulkUpdateModal = document.getElementById('bulkUpdateModal');
+                
+                if (!bulkUpdateIds || !bulkUpdateSelectedCount || !bulkUpdateRedirect || !bulkUpdateModal) {
+                    console.error('Bulk update modal elements not found');
+                    return;
+                }
+                
+                bulkUpdateIds.value = ids.join(',');
+                bulkUpdateSelectedCount.textContent = ids.length;
+                bulkUpdateRedirect.value = window.location.href;
+                
+                const modal = new bootstrap.Modal(bulkUpdateModal);
+                modal.show();
+            } catch(error) {
+                console.error('Error in bulk update:', error);
+            }
+        });
+    }
+
+    // Bulk reassign functionality
+    if (bulkReassignBtn) {
+        bulkReassignBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ids = Array.from(selectedSet);
+            if (ids.length === 0) return;
+            
+            try {
+                const bulkReassignCount = document.getElementById('bulkReassignCount');
+                const bulkReassignModalElement = document.getElementById('bulkReassignModal');
+                
+                if (!bulkReassignCount || !bulkReassignModalElement) {
+                    console.error('Bulk reassign modal elements not found');
+                    return;
+                }
+                
+                bulkReassignCount.textContent = ids.length;
+                const modal = new bootstrap.Modal(bulkReassignModalElement);
+                modal.show();
+            } catch(error) {
+                console.error('Error in bulk reassign:', error);
+            }
+        });
+    }
+
+    // Bulk unassign functionality
+    if (bulkUnassignBtn) {
+        bulkUnassignBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const ids = Array.from(selectedSet);
+            if (ids.length === 0) return;
+            if (confirm(`Are you sure you want to unassign ${ids.length} leads?`)) {
+                try {
+                    const bulkUnassignIds = document.getElementById('bulkUnassignIds');
+                    const bulkUnassignRedirect = document.getElementById('bulkUnassignRedirect');
+                    const bulkUnassignForm = document.getElementById('bulkUnassignForm');
+                    
+                    if (!bulkUnassignIds || !bulkUnassignRedirect || !bulkUnassignForm) {
+                        console.error('Bulk unassign form elements not found');
+                        return;
+                    }
+                    
+                    bulkUnassignIds.value = ids.join(',');
+                    bulkUnassignRedirect.value = window.location.href;
+                    bulkUnassignForm.submit();
+                } catch(error) {
+                    console.error('Error in bulk unassign:', error);
+                }
+            }
+        });
+    }
+
+    // Handle bulk update status change with custom fields
+    const bulkStatusSelect = document.getElementById('new_status_id');
+    const bulkCustomFieldsContainer = document.getElementById('bulkCustomFieldsContainer');
+    
+    if (bulkStatusSelect && bulkCustomFieldsContainer) {
+        bulkStatusSelect.addEventListener('change', function() {
+            const selectedStatusId = this.value;
+            const selectedStatusName = this.selectedOptions[0]?.text?.replace(' 📝', '') || '';
+            
+            // Clear previous custom fields
+            bulkCustomFieldsContainer.innerHTML = '';
+            
+            if (selectedStatusId) {
+                // Show loading indicator
+                bulkCustomFieldsContainer.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading custom fields...</div>';
+                
+                // Fetch custom fields for the selected status
+                fetch(`index.php?action=get_custom_fields_for_status&status_id=${selectedStatusId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        bulkCustomFieldsContainer.innerHTML = '';
+                        
+                        if (data.customFields && data.customFields.length > 0) {
+                            // Add header for custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-info mb-3"><i class="fas fa-info-circle me-2"></i>This status requires additional information for all selected leads:</div>');
+                            
+                            data.customFields.forEach(field => {
+                                const fieldHtml = createCustomFieldHtml(field);
+                                bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+                            });
+                        } else {
+                            // Show message when no custom fields
+                            bulkCustomFieldsContainer.insertAdjacentHTML('beforeend', '<div class="alert alert-success mb-3"><i class="fas fa-check-circle me-2"></i>No additional fields required for this status.</div>');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching custom fields:', error);
+                        bulkCustomFieldsContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading custom fields. Please try again.</div>';
+                    });
+            }
+        });
+    }
+    
+    // Function to create custom field HTML
+    function createCustomFieldHtml(field) {
+        const required = field.is_required ? 'required' : '';
+        const requiredAsterisk = field.is_required ? ' <span class="text-danger">*</span>' : '';
+        
+        let inputHtml = '';
+        
+        switch (field.field_type) {
+            case 'textarea':
+                inputHtml = `<textarea class="form-control" name="custom_field_${field.field_name}" ${required}></textarea>`;
+                break;
+            case 'select':
+                const options = field.field_options ? field.field_options.split('\n') : [];
+                inputHtml = `<select class="form-select" name="custom_field_${field.field_name}" ${required}>`;
+                inputHtml += '<option value="">Select...</option>';
+                options.forEach(option => {
+                    inputHtml += `<option value="${option.trim()}">${option.trim()}</option>`;
+                });
+                inputHtml += '</select>';
+                break;
+            case 'date':
+                inputHtml = `<input type="date" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'number':
+                inputHtml = `<input type="number" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'email':
+                inputHtml = `<input type="email" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            case 'url':
+                inputHtml = `<input type="url" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+                break;
+            default: // text
+                inputHtml = `<input type="text" class="form-control" name="custom_field_${field.field_name}" ${required}>`;
+        }
+        
+        return `
+            <div class="custom-field-container">
+                <label for="custom_field_${field.field_name}" class="form-label fw-bold">
+                    ${field.field_label}${requiredAsterisk}
+                </label>
+                ${inputHtml}
+                ${field.is_required ? '<div class="form-text text-muted mt-2"><i class="fas fa-asterisk text-danger me-1"></i>This field is required</div>' : ''}
+            </div>
+        `;
+    }
+
+    // Bulk update form submission
+    const bulkUpdateForm = document.getElementById('bulkUpdateForm');
+    if (bulkUpdateForm) {
+        bulkUpdateForm.addEventListener('submit', function(e) {
+            const newStatusId = document.getElementById('new_status_id').value;
+            const newStatusName = document.getElementById('new_status_id').selectedOptions[0]?.text?.replace(' 📝', '') || '';
+            const count = selectedSet.size;
+            if (!newStatusId || count === 0) {
+                e.preventDefault();
+                alert('Select leads and a status');
+                return;
+            }
+            if (!confirm(`Are you sure you want to update the status to "${newStatusName}" for ${count} selected lead(s)?`)) {
+                e.preventDefault();
+            } else {
+                // Clear selections after successful submission
+                setTimeout(() => {
+                    selectedSet.clear();
+                    saveSelectedSet(selectedSet);
+                    leadCheckboxes.forEach(cb => cb.checked = false);
+                    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                    updateBulkButtons();
+                    updateSelectAllState();
+                }, 1000);
+            }
+        });
+    }
+
+    // Bulk reassign form submission
+    const bulkReassignForm = document.getElementById('bulkReassignForm');
+    if (bulkReassignForm) {
+        bulkReassignForm.addEventListener('submit', function(e) {
+            const ids = Array.from(selectedSet);
+            if (ids.length === 0) {
+                e.preventDefault();
+                return;
+            }
+            const formData = new FormData(this);
+            ids.forEach(leadId => {
+                formData.append('lead_ids[]', leadId);
+            });
+            formData.append('redirect_url', window.location.href);
+            
+            e.preventDefault();
+            fetch('index.php?action=bulk_assign_leads', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    selectedSet.clear();
+                    saveSelectedSet(selectedSet);
+                    location.reload();
+                } else {
+                    alert('Error reassigning leads. Please try again.');
+                }
+            });
+        });
+    }
+
+    // Column personalization
+    const COLUMNS_COOKIE = 'assigned_leads_columns';
+    const allColumnKeys = Array.from(document.querySelectorAll('thead th[data-column]')).map(th => th.getAttribute('data-column'));
+    function getColumnsSelection() {
+        try { 
+            const raw = getCookie(COLUMNS_COOKIE);
+            if (!raw) return null;
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr) && arr.length) return arr;
+            return null;
+        } catch(e) { return null; }
+    }
+    function saveColumnsSelection(keys) {
+        setCookie(COLUMNS_COOKIE, JSON.stringify(keys), 30);
+    }
+    function applyColumns(keys) {
+        const show = new Set(keys);
+        document.querySelectorAll('thead th[data-column]').forEach(th => {
+            const key = th.getAttribute('data-column');
+            th.style.display = show.has(key) ? '' : 'none';
+        });
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            tr.querySelectorAll('[data-column]').forEach((td, index) => {
+                const key = td.getAttribute('data-column');
+                td.style.display = show.has(key) ? '' : 'none';
+            });
+        });
+    }
+    
+    // Build and show columns modal
+    const columnsBtn = document.getElementById('columnsBtn');
+    if (columnsBtn) {
+        columnsBtn.addEventListener('click', function() {
+            let modalEl = document.getElementById('columnsModal');
+            if (!modalEl) {
+                modalEl = document.createElement('div');
+                modalEl.className = 'modal fade';
+                modalEl.id = 'columnsModal';
+                modalEl.tabIndex = -1;
+                modalEl.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Choose Columns</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row" id="columnsList"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" id="saveColumnsBtn">Save</button>
+                        </div>
+                    </div>
+                </div>`;
+                document.body.appendChild(modalEl);
+            }
+            const modal = new bootstrap.Modal(modalEl);
+            const current = getColumnsSelection() || allColumnKeys;
+            const list = modalEl.querySelector('#columnsList');
+            list.innerHTML = '';
+            allColumnKeys.forEach(key => {
+                const label = key.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+                const id = 'col_' + key;
+                const col = document.createElement('div');
+                col.className = 'col-6 mb-2';
+                col.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="${id}" value="${key}" ${current.includes(key)?'checked':''}>
+                        <label class="form-check-label" for="${id}">${label}</label>
+                    </div>`;
+                list.appendChild(col);
+            });
+            modalEl.querySelector('#saveColumnsBtn').onclick = function() {
+                const keys = Array.from(list.querySelectorAll('input:checked')).map(i => i.value);
+                if (!keys.length) { alert('Please select at least one column'); return; }
+                saveColumnsSelection(keys);
+                applyColumns(keys);
+                modal.hide();
+            };
+            modal.show();
+        });
+    }
+    
+    // Apply saved columns on load
+    const savedCols = getColumnsSelection();
+    if (savedCols) applyColumns(savedCols);
 
 // View assignment history
-function viewAssignmentHistory(leadId) {
+    window.viewAssignmentHistory = function(leadId) {
     const modal = new bootstrap.Modal(document.getElementById('assignmentHistoryModal'));
     const content = document.getElementById('assignmentHistoryContent');
     
@@ -588,30 +1079,17 @@ function viewAssignmentHistory(leadId) {
         .catch(error => {
             content.innerHTML = '<div class="alert alert-danger">Error loading assignment history.</div>';
         });
-}
+    };
 
 // Reassign lead
-function reassignLead(leadId) {
+    window.reassignLead = function(leadId) {
     document.getElementById('reassignLeadId').value = leadId;
     const modal = new bootstrap.Modal(document.getElementById('reassignModal'));
     modal.show();
-}
-
-// Bulk reassign
-function bulkReassign() {
-    const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-    if (selectedLeads.length === 0) {
-        alert('Please select leads to reassign.');
-        return;
-    }
-    
-    document.getElementById('bulkReassignCount').textContent = selectedLeads.length;
-    const modal = new bootstrap.Modal(document.getElementById('bulkReassignModal'));
-    modal.show();
-}
+    };
 
 // Unassign lead
-function unassignLead(leadId) {
+    window.unassignLead = function(leadId) {
     if (confirm('Are you sure you want to unassign this lead?')) {
         const form = document.createElement('form');
         form.method = 'POST';
@@ -632,42 +1110,12 @@ function unassignLead(leadId) {
         document.body.appendChild(form);
         form.submit();
     }
-}
-
-// Bulk unassign
-function bulkUnassign() {
-    const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-    if (selectedLeads.length === 0) {
-        alert('Please select leads to unassign.');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to unassign ${selectedLeads.length} leads?`)) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'index.php?action=bulk_unassign_leads';
-        
-        selectedLeads.forEach(leadId => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'lead_ids[]';
-            input.value = leadId;
-            form.appendChild(input);
-        });
-        
-        const redirectInput = document.createElement('input');
-        redirectInput.type = 'hidden';
-        redirectInput.name = 'redirect_url';
-        redirectInput.value = window.location.href;
-        form.appendChild(redirectInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
+    };
 
 // Form submissions
-document.getElementById('reassignForm').addEventListener('submit', function(e) {
+    const reassignForm = document.getElementById('reassignForm');
+    if (reassignForm) {
+        reassignForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
     const formData = new FormData(this);
@@ -685,29 +1133,7 @@ document.getElementById('reassignForm').addEventListener('submit', function(e) {
         }
     });
 });
-
-document.getElementById('bulkReassignForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-    const formData = new FormData(this);
-    
-    selectedLeads.forEach(leadId => {
-        formData.append('lead_ids[]', leadId);
-    });
-    formData.append('redirect_url', window.location.href);
-    
-    fetch('index.php?action=bulk_assign_leads', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            location.reload();
-        } else {
-            alert('Error reassigning leads. Please try again.');
-        }
-    });
+    }
 });
 </script>
 
@@ -750,6 +1176,33 @@ document.getElementById('bulkReassignForm').addEventListener('submit', function(
 .table-responsive {
     max-height: 600px;
     overflow-y: auto;
+}
+
+.custom-field-container {
+    border-left: 3px solid #0d6efd;
+    padding-left: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    border-radius: 0 5px 5px 0;
+    padding: 15px;
+}
+
+.custom-field-container .form-label {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.custom-field-container .form-control,
+.custom-field-container .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.custom-field-container .form-control:focus,
+.custom-field-container .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 </style>
 
