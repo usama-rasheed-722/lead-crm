@@ -284,6 +284,9 @@
                             <th class="sortable" data-column="company">
                                 Company <i class="fas fa-sort"></i>
                             </th>
+                            <th class="sortable" data-column="lead_segment">
+                                Lead Segment <i class="fas fa-sort"></i>
+                            </th>
                             <th class="sortable" data-column="email">
                                 Email <i class="fas fa-sort"></i>
                             </th>
@@ -323,6 +326,7 @@
                                 </td>
                                 <td data-column="name"><?= htmlspecialchars($lead['name'] ?? '') ?></td>
                                 <td data-column="company"><?= htmlspecialchars($lead['company'] ?? '') ?></td>
+                                <td data-column="lead_segment"><?= htmlspecialchars($lead['lead_segment'] ?? '') ?></td>
                                 <td data-column="email">
                                     <?php if (!empty($lead['email'])): ?>
                                         <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">

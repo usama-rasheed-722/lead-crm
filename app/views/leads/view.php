@@ -114,7 +114,7 @@
                                 <td class="fw-bold">LinkedIn:</td>
                                 <td>
                                     <?php if ($lead['linkedin']): ?>
-                                        <a href="<?= htmlspecialchars($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">
+                                        <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">
                                             <i class="fab fa-linkedin me-1"></i>
                                             View Profile
                                         </a>
@@ -127,7 +127,7 @@
                                 <td class="fw-bold">Website:</td>
                                 <td>
                                     <?php if ($lead['website']): ?>
-                                        <a href="<?= htmlspecialchars($lead['website']) ?>" target="_blank" class="text-decoration-none">
+                                        <a href="<?= ensure_url_protocol($lead['website']) ?>" target="_blank" class="text-decoration-none">
                                             <i class="fas fa-external-link-alt me-1"></i>
                                             <?= htmlspecialchars($lead['website']) ?>
                                         </a>
@@ -140,7 +140,7 @@
                                 <td class="fw-bold">Clutch:</td>
                                 <td>
                                     <?php if ($lead['clutch']): ?>
-                                        <a href="<?= htmlspecialchars($lead['clutch']) ?>" target="_blank" class="text-decoration-none">
+                                        <a href="<?= ensure_url_protocol($lead['clutch']) ?>" target="_blank" class="text-decoration-none">
                                             <i class="fas fa-external-link-alt me-1"></i>
                                             View Profile
                                         </a>
@@ -244,12 +244,12 @@
                         </a>
                     <?php endif; ?>
                     <?php if ($lead['linkedin']): ?>
-                        <a href="<?= htmlspecialchars($lead['linkedin']) ?>" target="_blank" class="btn btn-outline-info">
+                        <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="btn btn-outline-info">
                             <i class="fab fa-linkedin me-2"></i>LinkedIn
                         </a>
                     <?php endif; ?>
                     <?php if ($lead['website']): ?>
-                        <a href="<?= htmlspecialchars($lead['website']) ?>" target="_blank" class="btn btn-outline-secondary">
+                        <a href="<?= ensure_url_protocol($lead['website']) ?>" target="_blank" class="btn btn-outline-secondary">
                             <i class="fas fa-globe me-2"></i>Website
                         </a>
                     <?php endif; ?>

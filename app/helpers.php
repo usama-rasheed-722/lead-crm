@@ -115,3 +115,29 @@ function getIdByName(array $data, string $name): ?int
  
     throw new Exception("Status not found: " . $name);
 }
+
+/**
+ * Ensure a URL has a proper protocol (http:// or https://)
+ * If the URL already has a protocol, return as-is
+ * If not, prepend https:// by default
+ * 
+ * @param string|null $url The URL to check
+ * @return string The URL with protocol, or empty string if input is empty
+ */
+function ensure_url_protocol($url) {
+    // Return empty string if URL is null or empty
+    if (empty($url)) {
+        return '';
+    }
+    
+    // Trim whitespace
+    $url = trim($url);
+    
+    // If already has protocol, return as-is
+    if (preg_match('/^https?:\/\//i', $url)) {
+        return $url;
+    }
+    
+    // Add https:// by default
+    return 'https://' . $url;
+}

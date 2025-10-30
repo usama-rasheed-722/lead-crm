@@ -185,6 +185,7 @@
                             <th data-col-key="next_step">Next Step</th>
                             <th data-col-key="other">Other</th>
                             <th data-col-key="country">Country</th>
+                            <th data-col-key="lead_segment">Lead Segment</th>
                             <th data-col-key="sdr_name">SDR</th>
                             <th data-col-key="duplicate_status">Duplicate Status</th>
                             <th data-col-key="actions">Actions</th>
@@ -231,14 +232,14 @@
                                 </td>
                                 <td data-col-key="linkedin">
                                     <?php if ($lead['linkedin']): ?>
-                                        <a href="<?=  $lead['linkedin'] ?>" target="_blank" class="text-decoration-none">LinkedIn</a>
+                                        <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">LinkedIn</a>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>
                                 </td>
                                 <td data-col-key="website">
                                     <?php if ($lead['website']): ?>
-                                        <a href="<?= $lead['website'] ?>" target="_blank" class="text-decoration-none">
+                                        <a href="<?= ensure_url_protocol($lead['website']) ?>" target="_blank" class="text-decoration-none">
                                             <i class="fas fa-external-link-alt me-1"></i>
                                             <?= htmlspecialchars(substr($lead['website'], 0, 30)) ?>
                                         </a>
@@ -252,19 +253,44 @@
                                 <td data-col-key="lead_status"><?= htmlspecialchars($lead['lead_status'] ?: 'N/A') ?></td>
                                 <td data-col-key="clutch">
                                     <?php if ($lead['clutch']): ?>
-                                        <a href="<?= htmlspecialchars($lead['clutch']) ?>" target="_blank" class="text-decoration-none">Clutch</a>
+                                        <a href="<?= ensure_url_protocol($lead['clutch']) ?>" target="_blank" class="text-decoration-none">Clutch</a>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>
                                 </td>
-                                <td data-col-key="insta"><?= htmlspecialchars($lead['insta'] ?: 'N/A') ?></td>
-                                <td data-col-key="social_profile"><?= htmlspecialchars($lead['social_profile'] ?: 'N/A') ?></td>
+                                <td data-col-key="insta">
+                                    <?php if ($lead['insta']): ?>
+                                        <a href="<?= ensure_url_protocol($lead['insta']) ?>" target="_blank" class="text-decoration-none">
+                                            <i class="fab fa-instagram me-1"></i>Instagram
+                                        </a>
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
+                                </td>
+                                <td data-col-key="social_profile">
+                                    <?php if ($lead['social_profile']): ?>
+                                        <a href="<?= ensure_url_protocol($lead['social_profile']) ?>" target="_blank" class="text-decoration-none">
+                                            <i class="fas fa-link me-1"></i>View Profile
+                                        </a>
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
+                                </td>
                                 <td data-col-key="address"><?= htmlspecialchars($lead['address'] ?: 'N/A') ?></td>
                                 <td data-col-key="description_information"><?= htmlspecialchars($lead['description_information'] ?: 'N/A') ?></td>
-                                <td data-col-key="whatsapp"><?= htmlspecialchars($lead['whatsapp'] ?: 'N/A') ?></td>
+                                <td data-col-key="whatsapp">
+                                    <?php if ($lead['whatsapp']): ?>
+                                        <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $lead['whatsapp']) ?>" target="_blank" class="text-decoration-none">
+                                            <i class="fab fa-whatsapp me-1"></i><?= htmlspecialchars($lead['whatsapp']) ?>
+                                        </a>
+                                    <?php else: ?>
+                                        N/A
+                                    <?php endif; ?>
+                                </td>
                                 <td data-col-key="next_step"><?= htmlspecialchars($lead['next_step'] ?: 'N/A') ?></td>
                                 <td data-col-key="other"><?= htmlspecialchars($lead['other'] ?: 'N/A') ?></td>
                                 <td data-col-key="country"><?= htmlspecialchars($lead['country'] ?: 'N/A') ?></td>
+                                <td data-col-key="lead_segment"><?= htmlspecialchars($lead['lead_segment'] ?: 'N/A') ?></td>
                                 <td data-col-key="sdr_name"><?= htmlspecialchars($lead['sdr_name'] ?: 'N/A') ?></td>
                                 <td data-col-key="duplicate_status">
                                     <?php
