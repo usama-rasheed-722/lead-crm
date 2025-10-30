@@ -496,12 +496,6 @@
     </div>
 </div>
 
-<!-- Bulk Unassign Form -->
-<form id="bulkUnassignForm" method="POST" action="index.php?action=bulk_unassign_leads" style="display: none;">
-    <input type="hidden" name="lead_ids" id="bulkUnassignIds">
-    <input type="hidden" name="redirect_url" id="bulkUnassignRedirect">
-</form>
-
 <!-- Assignment History Modal -->
 <div class="modal fade" id="assignmentHistoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -720,58 +714,87 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Initialize all modals once on page load
+    const bulkUpdateModalElement = document.getElementById('bulkUpdateModal');
+    const bulkReassignModalElement = document.getElementById('bulkReassignModal');
+    const assignmentHistoryModalElement = document.getElementById('assignmentHistoryModal');
+    const reassignModalElement = document.getElementById('reassignModal');
+    
+    let bulkUpdateModalInstance = null;
+    let bulkReassignModalInstance = null;
+    let assignmentHistoryModalInstance = null;
+    let reassignModalInstance = null;
+    
+    if (bulkUpdateModalElement) {
+        bulkUpdateModalInstance = new bootstrap.Modal(bulkUpdateModalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+    }
+    
+    if (bulkReassignModalElement) {
+        bulkReassignModalInstance = new bootstrap.Modal(bulkReassignModalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+    }
+    
+    if (assignmentHistoryModalElement) {
+        assignmentHistoryModalInstance = new bootstrap.Modal(assignmentHistoryModalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+    }
+    
+    if (reassignModalElement) {
+        reassignModalInstance = new bootstrap.Modal(reassignModalElement, {
+            backdrop: true,
+            keyboard: true
+        });
+    }
+
     // Bulk update functionality
-    if (bulkUpdateBtn) {
+    if (bulkUpdateBtn && bulkUpdateModalInstance) {
         bulkUpdateBtn.addEventListener('click', function(e) {
             e.preventDefault();
             const ids = Array.from(selectedSet);
             if (ids.length === 0) return;
             
-            try {
-                const bulkUpdateIds = document.getElementById('bulkUpdateIds');
-                const bulkUpdateSelectedCount = document.getElementById('bulkUpdateSelectedCount');
-                const bulkUpdateRedirect = document.getElementById('bulkUpdateRedirect');
-                const bulkUpdateModal = document.getElementById('bulkUpdateModal');
-                
-                if (!bulkUpdateIds || !bulkUpdateSelectedCount || !bulkUpdateRedirect || !bulkUpdateModal) {
-                    console.error('Bulk update modal elements not found');
-                    return;
-                }
-                
+            // Update form fields if they exist
+            const bulkUpdateIds = document.getElementById('bulkUpdateIds');
+            const bulkUpdateSelectedCount = document.getElementById('bulkUpdateSelectedCount');
+            const bulkUpdateRedirect = document.getElementById('bulkUpdateRedirect');
+            
+            if (bulkUpdateIds) {
                 bulkUpdateIds.value = ids.join(',');
-                bulkUpdateSelectedCount.textContent = ids.length;
-                bulkUpdateRedirect.value = window.location.href;
-                
-                const modal = new bootstrap.Modal(bulkUpdateModal);
-                modal.show();
-            } catch(error) {
-                console.error('Error in bulk update:', error);
             }
+            if (bulkUpdateSelectedCount) {
+                bulkUpdateSelectedCount.textContent = ids.length;
+            }
+            if (bulkUpdateRedirect) {
+                bulkUpdateRedirect.value = window.location.href;
+            }
+            
+            // Show the modal
+            bulkUpdateModalInstance.show();
         });
     }
 
     // Bulk reassign functionality
-    if (bulkReassignBtn) {
+    if (bulkReassignBtn && bulkReassignModalInstance) {
         bulkReassignBtn.addEventListener('click', function(e) {
             e.preventDefault();
             const ids = Array.from(selectedSet);
             if (ids.length === 0) return;
             
-            try {
-                const bulkReassignCount = document.getElementById('bulkReassignCount');
-                const bulkReassignModalElement = document.getElementById('bulkReassignModal');
-                
-                if (!bulkReassignCount || !bulkReassignModalElement) {
-                    console.error('Bulk reassign modal elements not found');
-                    return;
-                }
-                
+            // Update the count display if element exists
+            const bulkReassignCount = document.getElementById('bulkReassignCount');
+            if (bulkReassignCount) {
                 bulkReassignCount.textContent = ids.length;
-                const modal = new bootstrap.Modal(bulkReassignModalElement);
-                modal.show();
-            } catch(error) {
-                console.error('Error in bulk reassign:', error);
             }
+            
+            // Show the modal
+            bulkReassignModalInstance.show();
         });
     }
 
@@ -785,16 +808,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     const bulkUnassignIds = document.getElementById('bulkUnassignIds');
                     const bulkUnassignRedirect = document.getElementById('bulkUnassignRedirect');
-                    const bulkUnassignForm = document.getElementById('bulkUnassignForm');
                     
-                    if (!bulkUnassignIds || !bulkUnassignRedirect || !bulkUnassignForm) {
+                    if (!bulkUnassignIds || !bulkUnassignRedirect) {
                         console.error('Bulk unassign form elements not found');
                         return;
                     }
                     
-                    bulkUnassignIds.value = ids.join(',');
-                    bulkUnassignRedirect.value = window.location.href;
-                    bulkUnassignForm.submit();
+                  
                 } catch(error) {
                     console.error('Error in bulk unassign:', error);
                 }
@@ -842,6 +862,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         bulkCustomFieldsContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error loading custom fields. Please try again.</div>';
                     });
             }
+        });
+    }
+    
+    // Reset bulk update modal when closed
+    if (bulkUpdateModalElement) {
+        bulkUpdateModalElement.addEventListener('hidden.bs.modal', function () {
+            if (bulkStatusSelect) bulkStatusSelect.value = '';
+            if (bulkCustomFieldsContainer) bulkCustomFieldsContainer.innerHTML = '';
+            const form = document.getElementById('bulkUpdateForm');
+            if (form) form.reset();
+        });
+    }
+    
+    // Reset bulk reassign modal when closed
+    if (bulkReassignModalElement) {
+        bulkReassignModalElement.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('bulkReassignForm');
+            if (form) form.reset();
         });
     }
     
@@ -1040,13 +1078,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedCols = getColumnsSelection();
     if (savedCols) applyColumns(savedCols);
 
+    // Ensure only one modal open at a time - prevents modal conflict
+    document.addEventListener('show.bs.modal', function (event) {
+        document.querySelectorAll('.modal.show').forEach(openModal => {
+            if (openModal !== event.target) {
+                const instance = bootstrap.Modal.getInstance(openModal);
+                if (instance) {
+                    instance.hide();
+                }
+            }
+        });
+    });
+
 // View assignment history
     window.viewAssignmentHistory = function(leadId) {
-    const modal = new bootstrap.Modal(document.getElementById('assignmentHistoryModal'));
+    if (!assignmentHistoryModalInstance) {
+        console.error('Assignment history modal not initialized');
+        return;
+    }
+    
     const content = document.getElementById('assignmentHistoryContent');
     
     content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-    modal.show();
+    assignmentHistoryModalInstance.show();
     
     fetch(`index.php?action=get_assignment_history&lead_id=${leadId}`)
         .then(response => response.json())
@@ -1083,9 +1137,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Reassign lead
     window.reassignLead = function(leadId) {
+    if (!reassignModalInstance) {
+        console.error('Reassign modal not initialized');
+        return;
+    }
+    
     document.getElementById('reassignLeadId').value = leadId;
-    const modal = new bootstrap.Modal(document.getElementById('reassignModal'));
-    modal.show();
+    reassignModalInstance.show();
     };
 
 // Unassign lead
