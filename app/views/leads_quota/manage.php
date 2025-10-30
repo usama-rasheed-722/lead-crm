@@ -87,8 +87,7 @@
                             <th>Quota Count</th>
                             <th>Assigned Leads</th>
                             <th>Completed Leads</th>
-                            <th>Remaining</th>
-                            <th>Carry Forward</th>
+                            <th>Remaining</th> 
                             <th>Progress</th>
                             <th>Instructions</th>
                             <th>Actions</th>
@@ -117,15 +116,6 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-warning"><?= $quota['quota_count'] - $quota['completed_leads'] ?></span>
-                                </td>
-                                <td>
-                                    <?php if (isset($quota['quota_carry_forward']) && $quota['quota_carry_forward'] > 0): ?>
-                                        <span class="badge bg-info" title="Leads carried forward from previous days">
-                                            <i class="fas fa-arrow-right me-1"></i><?= $quota['quota_carry_forward'] ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php

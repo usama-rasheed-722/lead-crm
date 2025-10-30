@@ -141,12 +141,10 @@ class LeadsQuotaModel extends Model {
                 s.name as status_name,
                 COUNT(lqa.id) as assigned_leads,
                 COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END) as completed_leads,
-                (lq.quota_count - COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END)) as remaining_leads,
-                ql.quota_carry_forward
+                (lq.quota_count - COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END)) as remaining_leads
             FROM leads_quota lq
             LEFT JOIN status s ON lq.status_id = s.id
             LEFT JOIN lead_quota_assignments lqa ON lq.id = lqa.leads_quota_id
-            LEFT JOIN quota_logs ql ON lq.user_id = ql.user_id AND lq.status_id = ql.status_id AND lq.assigned_date = ql.log_date
             WHERE lq.user_id = ? AND lq.assigned_date = ?
             GROUP BY lq.id
             ORDER BY s.name
@@ -243,13 +241,11 @@ class LeadsQuotaModel extends Model {
         $stmt = $this->pdo->prepare("
             SELECT lq.*, u.full_name as user_name, s.name as status_name,
                    COUNT(lqa.id) as assigned_leads,
-                   COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END) as completed_leads,
-                   ql.quota_carry_forward
+                   COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END) as completed_leads
             FROM leads_quota lq
             LEFT JOIN users u ON lq.user_id = u.id
             LEFT JOIN status s ON lq.status_id = s.id
             LEFT JOIN lead_quota_assignments lqa ON lq.id = lqa.leads_quota_id
-            LEFT JOIN quota_logs ql ON lq.user_id = ql.user_id AND lq.status_id = ql.status_id AND lq.assigned_date = ql.log_date
             WHERE lq.assigned_date = ?
             GROUP BY lq.id
             ORDER BY u.full_name, s.name

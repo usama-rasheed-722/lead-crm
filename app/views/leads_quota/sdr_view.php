@@ -76,8 +76,7 @@
                             <th>Status</th>
                             <th class="text-center">Assigned</th>
                             <th class="text-center">Completed</th>
-                            <th class="text-center">Remaining</th>
-                            <th class="text-center">Carry Forward</th>
+                            <th class="text-center">Remaining</th> 
                             <th class="text-center">Progress</th>
                             <th class="text-center">Instructions</th>
                             <th class="text-center">Action</th>
@@ -98,15 +97,7 @@
                                 <td class="text-center">
                                     <span class="badge bg-warning fs-6"><?= $quota['remaining_leads'] ?></span>
                                 </td>
-                                <td class="text-center">
-                                    <?php if (isset($quota['quota_carry_forward']) && $quota['quota_carry_forward'] > 0): ?>
-                                        <span class="badge bg-info fs-6" title="Leads carried forward from previous days">
-                                            <i class="fas fa-arrow-right me-1"></i><?= $quota['quota_carry_forward'] ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
+
                                 <td class="text-center">
                                     <?php
                                     $percentage = $quota['quota_count'] > 0 ? ($quota['completed_leads'] / $quota['quota_count']) * 100 : 0;

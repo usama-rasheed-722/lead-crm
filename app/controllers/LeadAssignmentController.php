@@ -49,8 +49,19 @@ class LeadAssignmentController extends Controller {
         $statuses = $this->statusModel->all();
         $users = $this->leadAssignmentModel->getUsersForAssignment();
         $statistics = $this->leadAssignmentModel->getAssignmentStatistics($filters);
-
-        include 'app/views/lead_assignment/assigned_leads.php';
+        // dd(1);
+        $this->view('lead_assignment/assigned_leads', [
+            'leads' => $leads,
+            'totalLeads' => $totalLeads,
+            'totalPages' => $totalPages,
+            'statuses' => $statuses,
+            'users' => $users,
+            'statistics' => $statistics,
+            'filters' => $filters,
+            'page' => $page,
+            'limit' => $limit,
+            'offset' => $offset
+        ]);
     }
 
     /**
