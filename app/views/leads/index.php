@@ -214,25 +214,46 @@
                                 <td data-col-key="job_title"><?= htmlspecialchars($lead['job_title'] ?: 'N/A') ?></td>
                                 <td data-col-key="email">
                                     <?php if ($lead['email']): ?>
-                                        <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['email']) ?>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
+                                                <?= htmlspecialchars($lead['email']) ?>
+                                            </a>
+                                            <?php if ($lead['email_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>
                                 </td>
                                 <td data-col-key="phone">
                                     <?php if ($lead['phone']): ?>
-                                        <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['phone']) ?>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
+                                                <?= htmlspecialchars($lead['phone']) ?>
+                                            </a>
+                                            <?php if ($lead['phone_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>
                                 </td>
                                 <td data-col-key="linkedin">
                                     <?php if ($lead['linkedin']): ?>
-                                        <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">LinkedIn</a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">LinkedIn</a>
+                                            <?php if ($lead['linkedin_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>
@@ -280,9 +301,16 @@
                                 <td data-col-key="description_information"><?= htmlspecialchars($lead['description_information'] ?: 'N/A') ?></td>
                                 <td data-col-key="whatsapp">
                                     <?php if ($lead['whatsapp']): ?>
-                                        <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $lead['whatsapp']) ?>" target="_blank" class="text-decoration-none">
-                                            <i class="fab fa-whatsapp me-1"></i><?= htmlspecialchars($lead['whatsapp']) ?>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $lead['whatsapp']) ?>" target="_blank" class="text-decoration-none">
+                                                <i class="fab fa-whatsapp me-1"></i><?= htmlspecialchars($lead['whatsapp']) ?>
+                                            </a>
+                                            <?php if ($lead['whatsapp_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php else: ?>
                                         N/A
                                     <?php endif; ?>

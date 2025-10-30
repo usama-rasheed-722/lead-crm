@@ -65,6 +65,10 @@ switch ($action) {
         (new LeadController())->generateSDR($_GET['id'] ?? null);
         break;
     
+    case 'toggle_field_verification':
+        (new LeadController())->toggleFieldVerification();
+        break;
+    
     case 'bulk_delete':
         (new LeadController())->bulkDelete();
         break;

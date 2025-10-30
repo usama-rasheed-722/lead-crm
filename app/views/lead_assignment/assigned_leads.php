@@ -329,16 +329,30 @@
                                 <td data-column="lead_segment"><?= htmlspecialchars($lead['lead_segment'] ?? '') ?></td>
                                 <td data-column="email">
                                     <?php if (!empty($lead['email'])): ?>
-                                        <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['email']) ?>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
+                                                <?= htmlspecialchars($lead['email']) ?>
+                                            </a>
+                                            <?php if ($lead['email_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td data-column="phone">
                                     <?php if (!empty($lead['phone'])): ?>
-                                        <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['phone']) ?>
-                                        </a>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
+                                                <?= htmlspecialchars($lead['phone']) ?>
+                                            </a>
+                                            <?php if ($lead['phone_verified'] ?? 0): ?>
+                                                <span class="badge bg-success" title="Verified">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td data-column="status_name">

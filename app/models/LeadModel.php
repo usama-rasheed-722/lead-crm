@@ -1169,4 +1169,118 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         $result = $stmt->fetch();
         return (int)$result['count'];
     }
+
+    /**
+     * Update verification status for a specific field
+     * 
+     * @param int $leadId The lead ID
+     * @param string $field The field to verify (email, phone, whatsapp, linkedin)
+     * @param bool $verified Verification status (true = verified, false = unverified)
+     * @return bool Success status
+     */
+    public function updateFieldVerification($leadId, $field, $verified) {
+        $allowedFields = ['email', 'phone', 'whatsapp', 'linkedin'];
+        
+        if (!in_array($field, $allowedFields)) {
+            return false;
+        }
+        
+        $column = $field . '_verified';
+        $value = $verified ? 1 : 0;
+        
+        $stmt = $this->pdo->prepare("
+            UPDATE leads 
+            SET {$column} = ? 
+            WHERE id = ?
+        ");
+        
+        return $stmt->execute([$value, $leadId]);
+    }
+
+    /**
+     * Get verification status for all fields of a lead
+     * 
+     * @param int $leadId The lead ID
+     * @return array|false Array with verification status or false on error
+     * @throws Exception if database columns don't exist
+     */
+    public function getVerificationStatus($leadId) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    email_verified,
+                    phone_verified,
+                    whatsapp_verified,
+                    linkedin_verified
+                FROM leads 
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([$leadId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Check if error is about unknown column
+            if (strpos($e->getMessage(), 'Unknown column') !== false) {
+                throw new Exception("Verification columns not found. Please run the migration: tools/add_verification_columns.sql");
+            }
+            throw $e;
+        }
+    }
+    
+    /**
+     * Toggle verification status for a field
+     * 
+     * @param int $leadId The lead ID
+     * @param string $field The field to toggle
+     * @return array|false Returns new status or false on error
+     * @throws Exception if database columns don't exist
+     */
+    public function toggleFieldVerification($leadId, $field) {
+        $allowedFields = ['email', 'phone', 'whatsapp', 'linkedin'];
+        
+        if (!in_array($field, $allowedFields)) {
+            return false;
+        }
+        
+        $column = $field . '_verified';
+        
+        try {
+            // Get current status
+            $status = $this->getVerificationStatus($leadId);
+            if ($status === false) {
+                return false;
+            }
+            
+            // Check if the column exists in the result
+            if (!array_key_exists($column, $status)) {
+                throw new Exception("Column {$column} does not exist. Please run the database migration.");
+            }
+            
+            $currentValue = $status[$column];
+            $newValue = $currentValue ? 0 : 1;
+            
+            // Update the verification status
+            $stmt = $this->pdo->prepare("
+                UPDATE leads 
+                SET {$column} = ? 
+                WHERE id = ?
+            ");
+            
+            if ($stmt->execute([$newValue, $leadId])) {
+                return [
+                    'success' => true,
+                    'field' => $field,
+                    'verified' => (bool)$newValue
+                ];
+            }
+            
+            return false;
+        } catch (PDOException $e) {
+            // Check if error is about unknown column
+            if (strpos($e->getMessage(), 'Unknown column') !== false) {
+                throw new Exception("Verification columns not found. Please run: tools/add_verification_columns.sql");
+            }
+            throw $e;
+        }
+    }
 }

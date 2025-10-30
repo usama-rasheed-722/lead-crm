@@ -889,5 +889,56 @@ class LeadController extends Controller {
             'statuses' => $statuses
         ]);
     }
+
+    /**
+     * Toggle field verification status
+     * Accepts: POST request with lead_id and field name
+     * Returns: JSON response with new verification status
+     */
+    public function toggleFieldVerification() {
+        // Clear any output buffers and set JSON header
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/json');
+        
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+                exit;
+            }
+            
+            $leadId = $_POST['lead_id'] ?? null;
+            $field = $_POST['field'] ?? null;
+            
+            if (!$leadId || !$field) {
+                echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+                exit;
+            }
+            
+            $leadModel = new LeadModel();
+            $result = $leadModel->toggleFieldVerification($leadId, $field);
+            
+            if ($result) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => ucfirst($field) . ' verification status updated',
+                    'field' => $result['field'],
+                    'verified' => $result['verified']
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Failed to update verification status. Please ensure the database columns exist.'
+                ]);
+            }
+        } catch (Exception $e) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Database error: ' . $e->getMessage() . '. Please run the migration script: tools/add_verification_columns.sql'
+            ]);
+        }
+        exit;
+    }
 }
 ?>

@@ -85,25 +85,53 @@
                             <tr>
                                 <td class="fw-bold">Email:</td>
                                 <td>
-                                    <?php if ($lead['email']): ?>
-                                        <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['email']) ?>
-                                        </a>
-                                    <?php else: ?>
-                                        N/A
-                                    <?php endif; ?>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <?php if ($lead['email']): ?>
+                                                <a href="mailto:<?= htmlspecialchars($lead['email']) ?>" class="text-decoration-none">
+                                                    <?= htmlspecialchars($lead['email']) ?>
+                                                </a>
+                                            <?php else: ?>
+                                                N/A
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if ($lead['email']): ?>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input verification-toggle" type="checkbox" 
+                                                   id="email_verified" data-field="email" data-lead-id="<?= $lead['id'] ?>"
+                                                   <?= ($lead['email_verified'] ?? 0) ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-muted" for="email_verified">
+                                                <?= ($lead['email_verified'] ?? 0) ? '✓ Verified' : 'Verify' ?>
+                                            </label>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">Phone:</td>
                                 <td>
-                                    <?php if ($lead['phone']): ?>
-                                        <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
-                                            <?= htmlspecialchars($lead['phone']) ?>
-                                        </a>
-                                    <?php else: ?>
-                                        N/A
-                                    <?php endif; ?>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <?php if ($lead['phone']): ?>
+                                                <a href="tel:<?= htmlspecialchars($lead['phone']) ?>" class="text-decoration-none">
+                                                    <?= htmlspecialchars($lead['phone']) ?>
+                                                </a>
+                                            <?php else: ?>
+                                                N/A
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if ($lead['phone']): ?>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input verification-toggle" type="checkbox" 
+                                                   id="phone_verified" data-field="phone" data-lead-id="<?= $lead['id'] ?>"
+                                                   <?= ($lead['phone_verified'] ?? 0) ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-muted" for="phone_verified">
+                                                <?= ($lead['phone_verified'] ?? 0) ? '✓ Verified' : 'Verify' ?>
+                                            </label>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         </table>
@@ -113,14 +141,28 @@
                             <tr>
                                 <td class="fw-bold">LinkedIn:</td>
                                 <td>
-                                    <?php if ($lead['linkedin']): ?>
-                                        <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">
-                                            <i class="fab fa-linkedin me-1"></i>
-                                            View Profile
-                                        </a>
-                                    <?php else: ?>
-                                        N/A
-                                    <?php endif; ?>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <?php if ($lead['linkedin']): ?>
+                                                <a href="<?= ensure_url_protocol($lead['linkedin']) ?>" target="_blank" class="text-decoration-none">
+                                                    <i class="fab fa-linkedin me-1"></i>
+                                                    View Profile
+                                                </a>
+                                            <?php else: ?>
+                                                N/A
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if ($lead['linkedin']): ?>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input verification-toggle" type="checkbox" 
+                                                   id="linkedin_verified" data-field="linkedin" data-lead-id="<?= $lead['id'] ?>"
+                                                   <?= ($lead['linkedin_verified'] ?? 0) ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-muted" for="linkedin_verified">
+                                                <?= ($lead['linkedin_verified'] ?? 0) ? '✓ Verified' : 'Verify' ?>
+                                            </label>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
@@ -183,7 +225,29 @@
                             </tr>
                             <tr>
                                 <td class="fw-bold">Whatsapp:</td>
-                                <td><?= htmlspecialchars($lead['whatsapp'] ?: 'N/A') ?></td>
+                                <td>
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <?php if ($lead['whatsapp']): ?>
+                                                <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', $lead['whatsapp']) ?>" target="_blank" class="text-decoration-none">
+                                                    <i class="fab fa-whatsapp me-1"></i><?= htmlspecialchars($lead['whatsapp']) ?>
+                                                </a>
+                                            <?php else: ?>
+                                                N/A
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php if ($lead['whatsapp']): ?>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input verification-toggle" type="checkbox" 
+                                                   id="whatsapp_verified" data-field="whatsapp" data-lead-id="<?= $lead['id'] ?>"
+                                                   <?= ($lead['whatsapp_verified'] ?? 0) ? 'checked' : '' ?>>
+                                            <label class="form-check-label small text-muted" for="whatsapp_verified">
+                                                <?= ($lead['whatsapp_verified'] ?? 0) ? '✓ Verified' : 'Verify' ?>
+                                            </label>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="fw-bold">Next Step:</td>
@@ -762,6 +826,110 @@ if (assignForm) {
         // The controller will handle the redirect back to this page
     });
 }
+
+// Handle verification toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const verificationToggles = document.querySelectorAll('.verification-toggle');
+    
+    verificationToggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const field = this.dataset.field;
+            const leadId = this.dataset.leadId;
+            const checkbox = this;
+            const label = this.nextElementSibling;
+            const originalLabelText = label.textContent;
+            
+            // Disable checkbox during request
+            checkbox.disabled = true;
+            label.textContent = 'Updating...';
+            
+            // Send AJAX request
+            fetch('index.php?action=toggle_field_verification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `lead_id=${leadId}&field=${field}`
+            })
+            .then(response => {
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response. Please check if the database migration has been run.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update label based on new status
+                    label.textContent = data.verified ? '✓ Verified' : 'Verify';
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    successMsg.style.zIndex = '9999';
+                    successMsg.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(successMsg);
+                    
+                    // Auto-dismiss after 3 seconds
+                    setTimeout(() => {
+                        successMsg.remove();
+                    }, 3000);
+                } else {
+                    // Revert checkbox state on error
+                    checkbox.checked = !checkbox.checked;
+                    label.textContent = originalLabelText;
+                    
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    errorMsg.style.zIndex = '9999';
+                    errorMsg.style.maxWidth = '600px';
+                    errorMsg.innerHTML = `
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error:</strong> ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(errorMsg);
+                    
+                    // Auto-dismiss after 8 seconds
+                    setTimeout(() => {
+                        errorMsg.remove();
+                    }, 8000);
+                }
+            })
+            .catch(error => {
+                console.error('Verification error:', error);
+                checkbox.checked = !checkbox.checked;
+                label.textContent = originalLabelText;
+                
+                // Show detailed error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                errorMsg.style.zIndex = '9999';
+                errorMsg.style.maxWidth = '600px';
+                errorMsg.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Database Error:</strong> The verification feature requires a database update. 
+                    <br><small>Please run the SQL migration file: <code>tools/add_verification_columns.sql</code></small>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(errorMsg);
+                
+                // Auto-dismiss after 10 seconds
+                setTimeout(() => {
+                    errorMsg.remove();
+                }, 10000);
+            })
+            .finally(() => {
+                checkbox.disabled = false;
+            });
+        });
+    });
+});
 </script>
 
 <!-- Assignment Modal -->
