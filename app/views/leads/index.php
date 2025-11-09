@@ -552,6 +552,10 @@
                         <textarea class="form-control" id="bulkAssignComment" name="comment" rows="3" 
                                   placeholder="Add a comment about this assignment..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label for="bulkAssignDate" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="bulkAssignDate" name="date" required>
+                    </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <span id="bulkAssignCount">0</span> leads will be assigned.
@@ -1049,6 +1053,20 @@ document.addEventListener('DOMContentLoaded', function() {
             leadIdsInput.name = 'lead_ids';
             leadIdsInput.value = selectedLeads.join(',');
             this.appendChild(leadIdsInput);
+            
+            // Add date to form data
+            const dateInput = document.createElement('input');
+            dateInput.type = 'hidden';
+            dateInput.name = 'date';
+            dateInput.value = document.getElementById('bulkAssignDate').value;
+            this.appendChild(dateInput);
+            
+            // Add comment to form data
+            const commentInput = document.createElement('input');
+            commentInput.type = 'hidden';
+            commentInput.name = 'comment';
+            commentInput.value = document.getElementById('bulkAssignComment').value;
+            this.appendChild(commentInput);
             
             // Add redirect URL to form data
             const redirectInput = document.createElement('input');

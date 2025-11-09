@@ -560,8 +560,16 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label for="reassignComment" class="form-label">Comment</label>
-                        <textarea class="form-control" id="reassignComment" name="comment" rows="3" 
+                        <label for="reassignQuotaSingle" class="form-label">Assign Quota</label>
+                        <input type="checkbox" id="reassignQuotaSingle" name="assign_quota" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reassignDateSingle" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="reassignDateSingle" name="date" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reassignCommentSingle" class="form-label">Comment</label>
+                        <textarea class="form-control" id="reassignCommentSingle" name="comment" rows="3" 
                                   placeholder="Add a comment about this assignment..."></textarea>
                     </div>
                 </div>
@@ -598,6 +606,14 @@
                             </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reassignDate" class="form-label">Assign Quota</label>
+                        <input type="checkbox" id="reassignQuota" name="assign_quota" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reassignDate" class="form-label">Date</label>
+                        <input type="date" disabled class="form-control" id="reassignDate" name="date">
                     </div>
                     <div class="mb-3">
                         <label for="bulkReassignComment" class="form-label">Comment</label>
@@ -976,28 +992,53 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    document.getElementById('reassignQuota').addEventListener('change', function() {
+        const dateInput = document.getElementById('reassignDate');
+        if (!this.checked) {
+              dateInput.value = '';
+            dateInput.disabled = true;
+        } else {
+            dateInput.value = new Date().toISOString().split('T')[0];
+            dateInput.disabled = false;
+        }
+    });
+
+
+    document.getElementById('reassignQuotaSingle').addEventListener('change', function() {
+        const dateInput = document.getElementById('reassignDateSingle');
+        if (!this.checked) {
+            dateInput.value = '';
+            dateInput.disabled = true;
+        } else {
+            dateInput.value = new Date().toISOString().split('T')[0];
+            dateInput.disabled = false;   
+        }
+    });
+
     // Bulk reassign form submission
     const bulkReassignForm = document.getElementById('bulkReassignForm');
     if (bulkReassignForm) {
         bulkReassignForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             const ids = Array.from(selectedSet);
-            if (ids.length === 0) {
-                e.preventDefault();
+            if (ids.length === 0) { 
                 return;
             }
             const formData = new FormData(this);
             ids.forEach(leadId => {
                 formData.append('lead_ids[]', leadId);
             });
+            formData.append('date', document.getElementById('reassignDate')?.value);
+            formData.append('reassign_quota', document.getElementById('reassignQuota')?.checked ? 1 : 0);
+            formData.append('comment', document.getElementById('bulkReassignComment').value);
             formData.append('redirect_url', window.location.href);
-            
-            e.preventDefault();
             fetch('index.php?action=bulk_assign_leads', {
                 method: 'POST',
                 body: formData
             })
             .then(response => {
                 if (response.ok) {
+                    console.log(response)
                     selectedSet.clear();
                     saveSelectedSet(selectedSet);
                     location.reload();

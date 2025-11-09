@@ -79,7 +79,7 @@ CREATE TABLE `leads` (
   `status_id` int(11) NOT NULL,
   `assigned_to` int(11) NOT NULL,
   `assigned_by` int(11) NOT NULL,
-  `assigned_at` int(11) NOT NULL,
+  `assigned_at` timestamp NOT NULL,
   `assignment_comment` text NOT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `date` date NOT NULL
@@ -97,7 +97,7 @@ CREATE TABLE `leads_quota` (
   `status_id` int(11) NOT NULL,
   `quota_count` int(11) NOT NULL,
   `explanation` text NOT NULL,
-  `assigned_date` date NOT NULL DEFAULT current_timestamp(),
+  `assigned_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

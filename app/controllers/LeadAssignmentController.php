@@ -3,18 +3,20 @@ require_once 'app/models/LeadAssignmentModel.php';
 require_once 'app/models/LeadModel.php';
 require_once 'app/models/StatusModel.php';
 require_once 'app/models/UserModel.php';
+require_once 'app/models/LeadsQuotaModel.php';
 
 class LeadAssignmentController extends Controller {
     private $leadAssignmentModel;
     private $leadModel;
     private $statusModel;
     private $userModel;
-
+    private $leadsQuotaModel;
     public function __construct() {
         $this->leadAssignmentModel = new LeadAssignmentModel();
         $this->leadModel = new LeadModel();
         $this->statusModel = new StatusModel();
         $this->userModel = new UserModel();
+        $this->leadsQuotaModel = new LeadsQuotaModel();
     }
 
     /**
@@ -152,8 +154,10 @@ class LeadAssignmentController extends Controller {
             $leadIdsRaw = $_POST['lead_ids'] ?? [];
             $assignedTo = (int)$_POST['assigned_to'];
             $comment = trim($_POST['comment'] ?? '');
+            $date = trim($_POST['date'] ?? date('Y-m-d'));
             $assignedBy = $_SESSION['user']['id'];
-            
+            $assignQuotaCheck = trim($_POST['reassign_quota'] ?? false);
+ 
             // Convert lead IDs to array if it's a comma-separated string
             if (is_string($leadIdsRaw)) {
                 $leadIds = array_filter(array_map('trim', explode(',', $leadIdsRaw)));
@@ -164,10 +168,13 @@ class LeadAssignmentController extends Controller {
             if (!empty($leadIds) && $assignedTo) {
                 try {
                     $results = $this->leadAssignmentModel->bulkAssignLeads($leadIds, $assignedTo, $assignedBy, $comment);
-                    
+
                     $successCount = count(array_filter($results));
                     $totalCount = count($results);
-                    
+                    // assign quota to leads
+                    if( $assignQuotaCheck != false ){
+                        $this->leadsQuotaModel->assignQuotaToLeads($assignedTo ,$leadIds, $date, $comment);
+                    }
                     error_log("Bulk assignment attempt - Leads: " . (is_array($leadIds) ? implode(',', $leadIds) : $leadIds) . ", Assigned To: $assignedTo, Success: $successCount/$totalCount");
                     
                     if ($successCount > 0) {
@@ -197,7 +204,7 @@ class LeadAssignmentController extends Controller {
                 }
             }
             
-            header("Location: $redirectUrl");
+            // header("Location: $redirectUrl");
             exit;
         }
     }

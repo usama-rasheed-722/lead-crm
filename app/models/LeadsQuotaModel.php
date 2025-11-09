@@ -1,52 +1,60 @@
 <?php
 // app/models/LeadsQuotaModel.php
-class LeadsQuotaModel extends Model {
-    
+class LeadsQuotaModel extends Model
+{
+
     // Create a new leads quota assignment
-    public function create($userId, $statusId, $quotaCount, $assignedDate = null, $explanation = null) {
+    public function create($userId, $statusId, $quotaCount, $assignedDate = null, $explanation = null, $autoAssign = true)
+    {
         if (!$assignedDate) {
             $assignedDate = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
-            INSERT INTO leads_quota (user_id, status_id, quota_count, assigned_date, explanation)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            quota_count = VALUES(quota_count),
-            explanation = VALUES(explanation),
-            updated_at = CURRENT_TIMESTAMP
+            SELECT id 
+            FROM leads_quota 
+            WHERE user_id = ? AND status_id = ? AND date(assigned_date) = ?
+            LIMIT 1
         ");
-        
-        $result = $stmt->execute([$userId, $statusId, $quotaCount, $assignedDate, $explanation]);
-        
-        if ($result) {
-            $quotaId = $this->pdo->lastInsertId();
-            if (!$quotaId) {
-                // If it was an update, get the existing ID
-                $stmt = $this->pdo->prepare("
-                    SELECT id FROM leads_quota 
-                    WHERE user_id = ? AND status_id = ? AND assigned_date = ?
-                ");
-                $stmt->execute([$userId, $statusId, $assignedDate]);
-                $quotaId = $stmt->fetchColumn();
+
+        $stmt->execute([$userId, $statusId, $assignedDate]);
+        $existingQuotaId = $stmt->fetchColumn();
+
+        if ($existingQuotaId) {
+            $stmt = $this->pdo->prepare("
+                UPDATE leads_quota
+                SET quota_count = ?, explanation = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ");
+            $result = $stmt->execute([$quotaCount, $explanation, $existingQuotaId]);
+            $quotaId = $existingQuotaId;
+        } else {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO leads_quota (user_id, status_id, quota_count, assigned_date, explanation)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $result = $stmt->execute([$userId, $statusId, $quotaCount, $assignedDate, $explanation]);
+            $quotaId = $result ? $this->pdo->lastInsertId() : false;
+        }
+
+        if ($result && $quotaId) {
+            if ($autoAssign) {
+                $this->assignLeadsToQuota($quotaId, $statusId, $quotaCount, $userId);
             }
-            
-            // Automatically assign leads to this quota
-            $this->assignLeadsToQuota($quotaId, $statusId, $quotaCount,$userId);
-            
             return $quotaId;
         }
-        
+
         return false;
     }
-    
+
     // Assign leads to a quota automatically
-    private function assignLeadsToQuota($quotaId, $statusId, $quotaCount,$userId) {
+    private function assignLeadsToQuota($quotaId, $statusId, $quotaCount, $userId)
+    {
         // Get available leads for this status that aren't already assigned to quotas today
         $stmt = $this->pdo->prepare("SELECT sdr_id from users WHERE id = ? ");
         $stmt->execute([$userId]);
-        $sdrId = $stmt->fetch(PDO::FETCH_COLUMN); 
-      
+        $sdrId = $stmt->fetch(PDO::FETCH_COLUMN);
+
         $stmt = $this->pdo->prepare("
                 WITH lqcte AS (
                 SELECT 
@@ -71,10 +79,10 @@ class LeadsQuotaModel extends Model {
             ORDER BY l.created_at ASC
             LIMIT ?;
         ");
-        
-        $stmt->execute([$sdrId,$statusId,  $quotaCount]);
+
+        $stmt->execute([$sdrId, $statusId,  $quotaCount]);
         $leads = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+
         // Assign these leads to the quota
         if (!empty($leads)) {
             $placeholders = str_repeat('?,', count($leads) - 1) . '?';
@@ -82,21 +90,22 @@ class LeadsQuotaModel extends Model {
                 INSERT IGNORE INTO lead_quota_assignments (leads_quota_id, lead_id)
                 VALUES " . str_repeat("(?, ?),", count($leads) - 1) . "(?, ?)
             ");
-            
+
             $params = [];
             foreach ($leads as $leadId) {
                 $params[] = $quotaId;
                 $params[] = $leadId;
             }
-            
+
             $stmt->execute($params);
         }
-        
+
         return count($leads);
     }
-    
+
     // Get quota by ID
-    public function getById($id) {
+    public function getById($id)
+    {
         $stmt = $this->pdo->prepare("
             SELECT lq.*, u.full_name as user_name, s.name as status_name
             FROM leads_quota lq
@@ -107,13 +116,14 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
-    
+
     // Get quotas for a user on a specific date
-    public function getByUserDate($userId, $date = null) {
+    public function getByUserDate($userId, $date = null)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT lq.*, s.name as status_name,
                    COUNT(lqa.id) as assigned_leads,
@@ -128,13 +138,14 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$userId, $date]);
         return $stmt->fetchAll();
     }
-    
+
     // Get quota summary for a user (today's quotas)
-    public function getQuotaSummary($userId, $date = null) {
+    public function getQuotaSummary($userId, $date = null)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT 
                 lq.*,
@@ -152,9 +163,10 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$userId, $date]);
         return $stmt->fetchAll();
     }
-    
+
     // Get assigned leads for a quota
-    public function getAssignedLeads($quotaId, $limit = 100, $offset = 0) {
+    public function getAssignedLeads($quotaId, $limit = 100, $offset = 0)
+    {
         $stmt = $this->pdo->prepare("
             SELECT l.*, lqa.assigned_at, lqa.completed_at, lqa.id as assignment_id
             FROM leads l
@@ -166,13 +178,14 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$quotaId, $limit, $offset]);
         return $stmt->fetchAll();
     }
-    
+
     // Get assigned leads for a user's quota on a specific date
-    public function getAssignedLeadsByUserDate($userId, $statusId, $date = null, $limit = 100, $offset = 0) {
+    public function getAssignedLeadsByUserDate($userId, $statusId, $date = null, $limit = 100, $offset = 0)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT l.*, lqa.assigned_at, lqa.completed_at, lqa.id as assignment_id, s.name as status_name
             FROM leads l
@@ -186,9 +199,10 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$userId, $statusId, $date, $limit, $offset]);
         return $stmt->fetchAll();
     }
-    
+
     // Mark a lead as completed in quota
-    public function markLeadCompleted($assignmentId) {
+    public function markLeadCompleted($assignmentId)
+    {
         $stmt = $this->pdo->prepare("
             UPDATE lead_quota_assignments 
             SET completed_at = CURRENT_TIMESTAMP 
@@ -196,9 +210,10 @@ class LeadsQuotaModel extends Model {
         ");
         return $stmt->execute([$assignmentId]);
     }
-    
+
     // Mark a lead as not completed (undo completion)
-    public function markLeadNotCompleted($assignmentId) {
+    public function markLeadNotCompleted($assignmentId)
+    {
         $stmt = $this->pdo->prepare("
             UPDATE lead_quota_assignments 
             SET completed_at = NULL 
@@ -206,9 +221,10 @@ class LeadsQuotaModel extends Model {
         ");
         return $stmt->execute([$assignmentId]);
     }
-    
+
     // Mark quota as completed when lead status changes (called from LeadModel)
-    public function markQuotaCompletedOnStatusChange($leadId, $newStatusId) {
+    public function markQuotaCompletedOnStatusChange($leadId, $newStatusId)
+    {
         // Find the assignment for this lead that's not completed
         $stmt = $this->pdo->prepare("
             SELECT lqa.id as assignment_id, lq.status_id as quota_status_id
@@ -218,7 +234,7 @@ class LeadsQuotaModel extends Model {
         ");
         $stmt->execute([$leadId]);
         $assignments = $stmt->fetchAll();
-        
+
         $completedCount = 0;
         foreach ($assignments as $assignment) {
             // Only mark as completed if the new status matches the quota status
@@ -228,16 +244,17 @@ class LeadsQuotaModel extends Model {
                 $completedCount++;
             }
         }
-        
+
         return $completedCount;
     }
-    
+
     // Get all quotas (admin view)
-    public function getAllQuotas($date = null) {
+    public function getAllQuotas($date = null)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT lq.*, u.full_name as user_name, s.name as status_name,
                    COUNT(lqa.id) as assigned_leads,
@@ -253,15 +270,17 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$date]);
         return $stmt->fetchAll();
     }
-    
+
     // Delete a quota
-    public function delete($id) {
+    public function delete($id)
+    {
         $stmt = $this->pdo->prepare("DELETE FROM leads_quota WHERE id = ?");
         return $stmt->execute([$id]);
     }
-    
+
     // Update quota count
-    public function updateQuotaCount($id, $quotaCount) {
+    public function updateQuotaCount($id, $quotaCount)
+    {
         $stmt = $this->pdo->prepare("
             UPDATE leads_quota 
             SET quota_count = ?, updated_at = CURRENT_TIMESTAMP 
@@ -269,15 +288,16 @@ class LeadsQuotaModel extends Model {
         ");
         return $stmt->execute([$quotaCount, $id]);
     }
-    
+
     // Process daily rollover for incomplete quotas
-    public function processDailyRollover($date = null) {
+    public function processDailyRollover($date = null)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $previousDate = date('Y-m-d', strtotime($date . ' -1 day'));
-        
+
         // Get all incomplete quotas from previous day
         $stmt = $this->pdo->prepare("
             SELECT lq.*, 
@@ -291,24 +311,24 @@ class LeadsQuotaModel extends Model {
         ");
         $stmt->execute([$previousDate]);
         $incompleteQuotas = $stmt->fetchAll();
-        
+
         $rolloverCount = 0;
-        
+
         foreach ($incompleteQuotas as $quota) {
             $remainingLeads = $quota['quota_count'] - $quota['completed_leads'];
-            
+
             if ($remainingLeads > 0) {
                 // Check if quota already exists for today
                 $existingQuota = $this->getQuotaByUserStatusDate($quota['user_id'], $quota['status_id'], $date);
-                
+
                 if ($existingQuota) {
                     // Update existing quota with rollover
                     $newQuotaCount = $existingQuota['quota_count'] + $remainingLeads;
                     $this->updateQuotaCount($existingQuota['id'], $newQuotaCount);
-                    
+
                     // Get incomplete leads from previous quota
                     $incompleteLeads = $this->getIncompleteLeadsFromQuota($quota['id']);
-                    
+
                     // Assign these leads to today's quota
                     if (!empty($incompleteLeads)) {
                         $this->assignLeadsToExistingQuota($existingQuota['id'], $incompleteLeads);
@@ -316,30 +336,31 @@ class LeadsQuotaModel extends Model {
                 } else {
                     // Create new quota for today with rollover (preserve explanation)
                     $newQuotaId = $this->create($quota['user_id'], $quota['status_id'], $remainingLeads, $date, $quota['explanation']);
-                    
+
                     if ($newQuotaId) {
                         // Get incomplete leads from previous quota
                         $incompleteLeads = $this->getIncompleteLeadsFromQuota($quota['id']);
-                        
+
                         // Assign these leads to new quota
                         if (!empty($incompleteLeads)) {
                             $this->assignLeadsToExistingQuota($newQuotaId, $incompleteLeads);
                         }
                     }
                 }
-                
+
                 // Log the rollover
                 $this->logQuotaRollover($quota['user_id'], $quota['status_id'], $previousDate, $date, $remainingLeads);
-                
+
                 $rolloverCount++;
             }
         }
-        
+
         return $rolloverCount;
     }
-    
+
     // Get quota by user, status, and date
-    private function getQuotaByUserStatusDate($userId, $statusId, $date) {
+    private function getQuotaByUserStatusDate($userId, $statusId, $date)
+    {
         $stmt = $this->pdo->prepare("
             SELECT * FROM leads_quota 
             WHERE user_id = ? AND status_id = ? AND assigned_date = ?
@@ -347,9 +368,10 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$userId, $statusId, $date]);
         return $stmt->fetch();
     }
-    
+
     // Get incomplete leads from a quota
-    private function getIncompleteLeadsFromQuota($quotaId) {
+    private function getIncompleteLeadsFromQuota($quotaId)
+    {
         $stmt = $this->pdo->prepare("
             SELECT lead_id FROM lead_quota_assignments 
             WHERE leads_quota_id = ? AND completed_at IS NULL
@@ -357,31 +379,33 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$quotaId]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
-    
+
     // Assign leads to existing quota
-    private function assignLeadsToExistingQuota($quotaId, $leadIds) {
+    private function assignLeadsToExistingQuota($quotaId, $leadIds)
+    {
         if (empty($leadIds)) {
             return 0;
         }
-        
+
         $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
         $stmt = $this->pdo->prepare("
             INSERT IGNORE INTO lead_quota_assignments (leads_quota_id, lead_id)
             VALUES " . str_repeat("(?, ?),", count($leadIds) - 1) . "(?, ?)
         ");
-        
+
         $params = [];
         foreach ($leadIds as $leadId) {
             $params[] = $quotaId;
             $params[] = $leadId;
         }
-        
+
         $stmt->execute($params);
         return $stmt->rowCount();
     }
-    
+
     // Log quota rollover
-    private function logQuotaRollover($userId, $statusId, $fromDate, $toDate, $rolloverCount) {
+    private function logQuotaRollover($userId, $statusId, $fromDate, $toDate, $rolloverCount)
+    {
         $stmt = $this->pdo->prepare("
             INSERT INTO quota_logs (user_id, status_id, quota_assigned, quota_used, quota_carry_forward, log_date, created_at)
             VALUES (?, ?, 0, 0, ?, ?, CURRENT_TIMESTAMP)
@@ -391,16 +415,17 @@ class LeadsQuotaModel extends Model {
         ");
         $stmt->execute([$userId, $statusId, $rolloverCount, $toDate]);
     }
-    
+
     // Get quota history with rollover information
-    public function getQuotaHistory($userId, $startDate = null, $endDate = null) {
+    public function getQuotaHistory($userId, $startDate = null, $endDate = null)
+    {
         if (!$startDate) {
             $startDate = date('Y-m-d', strtotime('-30 days'));
         }
         if (!$endDate) {
             $endDate = date('Y-m-d');
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT 
                 lq.*,
@@ -420,24 +445,25 @@ class LeadsQuotaModel extends Model {
         $stmt->execute([$userId, $startDate, $endDate]);
         return $stmt->fetchAll();
     }
-    
+
     // Get comprehensive quota report for admin
-    public function getQuotaReport($startDate = null, $endDate = null, $userId = null) {
+    public function getQuotaReport($startDate = null, $endDate = null, $userId = null)
+    {
         if (!$startDate) {
             $startDate = date('Y-m-d', strtotime('-30 days'));
         }
         if (!$endDate) {
             $endDate = date('Y-m-d');
         }
-        
+
         $whereClause = "lq.assigned_date BETWEEN ? AND ?";
         $params = [$startDate, $endDate];
-        
+
         if ($userId) {
             $whereClause .= " AND lq.user_id = ?";
             $params[] = $userId;
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT 
                 lq.*,
@@ -464,24 +490,25 @@ class LeadsQuotaModel extends Model {
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
-    
+
     // Get quota statistics summary
-    public function getQuotaStatistics($startDate = null, $endDate = null, $userId = null) {
+    public function getQuotaStatistics($startDate = null, $endDate = null, $userId = null)
+    {
         if (!$startDate) {
             $startDate = date('Y-m-d', strtotime('-30 days'));
         }
         if (!$endDate) {
             $endDate = date('Y-m-d');
         }
-        
+
         $whereClause = "lq.assigned_date BETWEEN ? AND ?";
         $params = [$startDate, $endDate];
-        
+
         if ($userId) {
             $whereClause .= " AND lq.user_id = ?";
             $params[] = $userId;
         }
-        
+
         $stmt = $this->pdo->prepare("
             SELECT 
                 COUNT(DISTINCT lq.id) as total_quotas,
@@ -495,13 +522,13 @@ class LeadsQuotaModel extends Model {
         ");
         $stmt->execute($params);
         $result = $stmt->fetch();
-        
+
         // Calculate average completion rate
         $avgCompletionRate = 0;
         if ($result['total_assigned'] > 0) {
             $avgCompletionRate = ($result['total_completed'] / $result['total_assigned']) * 100;
         }
-        
+
         // Return statistics
         $stats = [
             'total_quotas' => (int)$result['total_quotas'],
@@ -511,8 +538,78 @@ class LeadsQuotaModel extends Model {
             'total_remaining' => (int)$result['total_remaining'],
             'avg_completion_rate' => round($avgCompletionRate, 2)
         ];
-        
+
         return $stats;
     }
+
+    public function assignQuotaToLeads($userId, $leadIds, $date, $explanation)
+    {
+        if (empty($leadIds)) {
+            return 0;
+        }
+        $placeholders = str_repeat('?,', count($leadIds) - 1) . '?';
+        // select all leads and get the status of the lead
+        $stmt = $this->pdo->prepare("
+            SELECT id, status_id FROM leads WHERE id IN (" . $placeholders . ")
+        ");
+        $stmt->execute($leadIds);
+        $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // group by status_id
+        $groupedLeads = [];
+        foreach ($leads as $lead) {
+            $groupedLeads[$lead['status_id']][] = $lead['id'];
+        }
+        //   now add the quota for leads and then assign the leads to the quota
+        foreach ($groupedLeads as $statusId => $leadIds) {
+            // this create method is assigning quota fromleads tablebut i need to asssign these leads not from leadstable please makecustom logic for this
+            $quotaId = $this->create($userId, $statusId, count($leadIds), $date, $explanation, false);
+            $this->assignQuotaDetailsToLeads($leadIds, $quotaId);
+        }
+        return true;
+    }
+
+    public function assignQuotaDetailsToLeads($leadIds, $quotaId)
+    {
+        if (empty($leadIds)) {
+            return 0;
+        }
+
+        $leadIds = array_values(array_unique(array_map('intval', $leadIds)));
+
+        if (empty($leadIds)) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT lead_id
+            FROM lead_quota_assignments
+            WHERE leads_quota_id = ? AND lead_id IN ($placeholders)
+        ");
+        $stmt->execute(array_merge([$quotaId], $leadIds));
+        $existingLeadIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($existingLeadIds)) {
+            $leadIds = array_values(array_diff($leadIds, array_map('intval', $existingLeadIds)));
+        }
+
+        if (empty($leadIds)) {
+            return 0;
+        }
+
+        $valuesPlaceholder = implode(',', array_fill(0, count($leadIds), '(?, ?)'));
+        $stmt = $this->pdo->prepare("
+            INSERT INTO lead_quota_assignments (leads_quota_id, lead_id)
+            VALUES $valuesPlaceholder
+        ");
+
+        $params = [];
+        foreach ($leadIds as $leadId) {
+            $params[] = $quotaId;
+            $params[] = $leadId;
+        }
+
+        $stmt->execute($params);
+        return $stmt->rowCount();
+    }
 }
-?>
