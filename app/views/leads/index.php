@@ -528,7 +528,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="bulkAssignForm" method="POST" action="index.php?action=bulk_assign_leads">
+            <form id="bulkAssignForm" data-action="index.php?action=bulk_assign_leads">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="bulkAssignTo" class="form-label">Assign To</label>
@@ -547,14 +547,19 @@
                             ?>
                         </select>
                     </div>
+                     <div class="mb-3">
+                        <label for="reassignQuota" class="form-label">Quota</label>
+                        <input type="checkbox" id="reassignQuota" name="reassign_quota" value="1">
+                    </div>
+            
+                    <div class="mb-3">
+                        <label for="bulkAssignDate" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="bulkAssignDate" name="date" disabled>
+                    </div>
                     <div class="mb-3">
                         <label for="bulkAssignComment" class="form-label">Comment</label>
                         <textarea class="form-control" id="bulkAssignComment" name="comment" rows="3" 
                                   placeholder="Add a comment about this assignment..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="bulkAssignDate" class="form-label">Date</label>
-                        <input type="date" class="form-control" id="bulkAssignDate" name="date" required>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
@@ -1002,6 +1007,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
     }
 
+    document.getElementById('reassignQuota').addEventListener('change', function() {
+        const dateInput = document.getElementById('bulkAssignDate');
+        if (!this.checked) {
+              dateInput.value = '';
+            dateInput.disabled = true;
+        } else {
+            dateInput.value = new Date().toISOString().split('T')[0];
+            dateInput.disabled = false;
+        }
+    });
+
     // Add event listener for bulk assign button
     if (bulkAssignBtn) {
         bulkAssignBtn.addEventListener('click', bulkAssign);
@@ -1038,51 +1054,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const bulkAssignForm = document.getElementById('bulkAssignForm');
     if (bulkAssignForm) {
-        bulkAssignForm.addEventListener('submit', function(e) {
-            // Debug: Log form data before submission
-            const formData = new FormData(this);
-            console.log('Bulk assignment form data:');
-            for (let [key, value] of formData.entries()) {
-                console.log(key, value);
-            }
-            
-            // Add selected lead IDs to form data
+        bulkAssignForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
             const selectedLeads = Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.value);
-            const leadIdsInput = document.createElement('input');
-            leadIdsInput.type = 'hidden';
-            leadIdsInput.name = 'lead_ids';
-            leadIdsInput.value = selectedLeads.join(',');
-            this.appendChild(leadIdsInput);
-            
-            // Add date to form data
-            const dateInput = document.createElement('input');
-            dateInput.type = 'hidden';
-            dateInput.name = 'date';
-            dateInput.value = document.getElementById('bulkAssignDate').value;
-            this.appendChild(dateInput);
-            
-            // Add comment to form data
-            const commentInput = document.createElement('input');
-            commentInput.type = 'hidden';
-            commentInput.name = 'comment';
-            commentInput.value = document.getElementById('bulkAssignComment').value;
-            this.appendChild(commentInput);
-            
-            // Add redirect URL to form data
-            const redirectInput = document.createElement('input');
-            redirectInput.type = 'hidden';
-            redirectInput.name = 'redirect_url';
-            redirectInput.value = window.location.href;
-            this.appendChild(redirectInput);
-            
-            // Show loading state
+            if (!selectedLeads.length) {
+                alert('Please select leads to assign.');
+                return;
+            }
+
             const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Assigning...';
-            submitBtn.disabled = true;
-            
-            // Let the form submit naturally to the action URL
-            // The controller will handle the redirect back to this page
+            const originalText = submitBtn ? submitBtn.textContent : '';
+            if (submitBtn) {
+                submitBtn.textContent = 'Assigning...';
+                submitBtn.disabled = true;
+            }
+
+            const formData = new FormData(this);
+            selectedLeads.forEach(id => formData.append('lead_ids[]', id));
+            formData.set('reassign_quota', document.getElementById('reassignQuota').checked ? 1 : 0);
+            formData.set('date', document.getElementById('bulkAssignDate').value || '');
+            formData.set('comment', document.getElementById('bulkAssignComment').value || '');
+            formData.set('redirect_url', window.location.href);
+
+            try {
+                const response = await fetch(this.dataset.action || 'index.php?action=bulk_assign_leads', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error assigning leads. Please try again.');
+                }
+
+                // Attempt to read JSON response for additional messaging (optional)
+                let message = '';
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data?.error) {
+                        throw new Error(data.error);
+                    }
+                    message = data?.message || '';
+                }
+
+                selectedSet.clear();
+                saveSelectedSet(selectedSet);
+
+                const bulkAssignModalElement = document.getElementById('bulkAssignModal');
+                if (bulkAssignModalElement) {
+                    const modalInstance = bootstrap.Modal.getInstance(bulkAssignModalElement) || new bootstrap.Modal(bulkAssignModalElement);
+                    modalInstance.hide();
+                }
+
+                if (message) {
+                    alert(message);
+                }
+
+                location.reload();
+            } catch (error) {
+                console.error('Bulk assignment failed:', error);
+                alert(error.message || 'Error assigning leads. Please try again.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.textContent = originalText || 'Assign Leads';
+                    submitBtn.disabled = false;
+                }
+            }
         });
     }
 });
