@@ -472,7 +472,7 @@ class LeadsQuotaModel extends Model
                 COUNT(lqa.id) as assigned_leads,
                 COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END) as completed_leads,
                 (lq.quota_count - COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END)) as remaining_leads,
-                ql.quota_carry_forward,
+                
                 CASE 
                     WHEN lq.quota_count > 0 THEN 
                         ROUND((COUNT(CASE WHEN lqa.completed_at IS NOT NULL THEN 1 END) / lq.quota_count) * 100, 2)
