@@ -133,7 +133,7 @@ class LeadAssignmentModel extends Model {
     public function getAssignedLeads($filters = [], $limit = 50, $offset = 0) {
         $whereConditions = ["l.assigned_to IS NOT NULL"];
         $params = [];
-
+        $params[] = $_SESSION['user']['id']; // For leads_quota join
         // SDR filter (assigned by)
         if (!empty($filters['assigned_by'])) {
             $whereConditions[] = "l.assigned_by = ?";
@@ -221,20 +221,59 @@ class LeadAssignmentModel extends Model {
 
         $whereClause = implode(' AND ', $whereConditions);
 
+        /**
+         * 
+         * WITH lq as (
+ SELECT * FROM  lead_quota_assignments lqa 
+		LEFT JOIN leads_quota lq ON lqa.id = lq.id 
+		WHERE lqa.completed_at IS NULL   and  lq.user_id = 3;
+)
+
+
+SELECT
+    l.*,
+    s.NAME AS status_name,
+    u1.username AS assigned_to_name,
+    u1.full_name AS assigned_to_full_name,
+    u2.username AS assigned_by_name,
+    u2.full_name AS assigned_by_full_name,
+    ls.NAME AS lead_source_name,
+    lqa.completed_at,
+    lqa.id AS assignment_id
+FROM
+    leads l
+    LEFT JOIN `status` s ON l.status_id = s.id
+    LEFT JOIN users u1 ON l.assigned_to = u1.id
+    LEFT JOIN users u2 ON l.assigned_by = u2.id
+    LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id
+ 
+ WORKING ON IT
+         */
         $stmt = $this->pdo->prepare("
+          WITH lqa AS (
             SELECT 
+                    lqa.*, 
+                    lq.user_id
+                FROM lead_quota_assignments lqa
+                LEFT JOIN leads_quota lq ON lqa.leads_quota_id = lq.id 
+                WHERE lq.user_id = ? AND lqa.completed_at IS NULL
+            )
+            SELECT
                 l.*,
-                s.name as status_name,
-                u1.username as assigned_to_name,
-                u1.full_name as assigned_to_full_name,
-                u2.username as assigned_by_name,
-                u2.full_name as assigned_by_full_name,
-                ls.name as lead_source_name
+                s.name AS status_name,
+                u1.username AS assigned_to_name,
+                u1.full_name AS assigned_to_full_name,
+                u2.username AS assigned_by_name,
+                u2.full_name AS assigned_by_full_name,
+                ls.name AS lead_source_name,
+                lqa.completed_at,
+                lqa.id AS assignment_id
             FROM leads l
             LEFT JOIN status s ON l.status_id = s.id
             LEFT JOIN users u1 ON l.assigned_to = u1.id
             LEFT JOIN users u2 ON l.assigned_by = u2.id
             LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id
+            LEFT JOIN lqa ON l.id = lqa.lead_id
             WHERE $whereClause
             ORDER BY l.assigned_at DESC
             LIMIT ? OFFSET ?

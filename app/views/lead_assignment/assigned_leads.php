@@ -415,6 +415,22 @@
                                                 onclick="reassignLead(<?= $lead['id'] ?>)" title="Reassign Lead">
                                             <i class="fas fa-user-edit"></i>
                                         </button>
+                                        <?php if ($lead['assignment_id']): ?>
+                                            <?php if (!$lead['completed_at']): ?>
+                                                <button type="button" class="btn btn-outline-success mark-completed-btn" 
+                                                        data-assignment-id="<?= $lead['assignment_id'] ?>" 
+                                                        data-lead-id="<?= $lead['id'] ?>"
+                                                        title="Mark as Completed">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-outline-warning mark-not-completed-btn" 
+                                                        data-assignment-id="<?= $lead['assignment_id'] ?>" title="Mark as Not Completed">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+
                                         <?php if (auth_user()['role'] !== 'sdr'): ?>
                                         <button type="button" class="btn btn-sm btn-outline-danger" 
                                                 onclick="unassignLead(<?= $lead['id'] ?>)" title="Unassign Lead">
@@ -1013,6 +1029,64 @@ document.addEventListener('DOMContentLoaded', function() {
             dateInput.value = new Date().toISOString().split('T')[0];
             dateInput.disabled = false;   
         }
+    });
+
+    // Handle mark as completed
+    document.querySelectorAll('.mark-completed-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.getAttribute('data-assignment-id');
+            
+            if (confirm('Are you sure you want to mark this lead as completed?')) {
+                fetch('index.php?action=leads_quota_mark_completed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'assignment_id=' + assignmentId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Failed to mark lead as completed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred');
+                });
+            }
+        });
+    });
+    
+    // Handle mark as not completed
+    document.querySelectorAll('.mark-not-completed-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.getAttribute('data-assignment-id');
+            
+            if (confirm('Are you sure you want to mark this lead as not completed?')) {
+                fetch('index.php?action=leads_quota_mark_not_completed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'assignment_id=' + assignmentId
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Failed to mark lead as not completed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred');
+                });
+            }
+        });
     });
 
     // Bulk reassign form submission
