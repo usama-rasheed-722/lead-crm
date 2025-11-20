@@ -23,7 +23,7 @@ foreach (glob(__DIR__ . '/app/controllers/*.php') as $file) {
 $action = $_GET['action'] ?? 'dashboard';
 
 // Auth check for non-login pages
-$publicRoutes = ['login', 'logout'];
+$publicRoutes = ['login', 'logout', 'meeting_portal', 'meeting_submit'];
 if (!in_array($action, $publicRoutes) && empty($_SESSION['user'])) {
     header('Location: index.php?action=login');
     exit;
@@ -110,6 +110,12 @@ switch ($action) {
         break;
     case 'lead_status_history':
         (new LeadController())->statusHistory();
+        break;
+    case 'reset_leads_filters':
+        (new LeadController())->resetLeadsFilters();
+        break;
+    case 'reset_leads_management_filters':
+        (new LeadController())->resetLeadsManagementFilters();
         break;
     case 'status_management':
         (new StatusController())->index();
@@ -312,6 +318,26 @@ switch ($action) {
         break;
     case 'export_assigned_leads':
         (new LeadAssignmentController())->exportAssignedLeads();
+        break;
+    case 'reset_assigned_leads_filters':
+        (new LeadAssignmentController())->resetAssignedLeadsFilters();
+        break;
+
+    // Meeting booking portal
+    case 'meeting_portal':
+        (new MeetingController())->portal();
+        break;
+    case 'meeting_submit':
+        (new MeetingController())->submit();
+        break;
+    case 'meeting_clients':
+        (new MeetingController())->index();
+        break;
+    case 'meeting_update_notes':
+        (new MeetingController())->updateNotes();
+        break;
+    case 'meeting_update_status':
+        (new MeetingController())->updateStatus();
         break;
     
     default:

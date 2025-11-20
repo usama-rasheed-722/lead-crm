@@ -14,7 +14,7 @@
 </head>
 <body>
     <?php if (auth_user()): ?>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm position-fixed w-100 z-1">
         <div class="container-fluid">
             <a class="navbar-brand" href="<?= base_url('index.php?action=dashboard') ?>">
                 <i class="fas fa-chart-line me-2"></i>CRM Lead Manager
@@ -32,7 +32,7 @@
                             <?= htmlspecialchars(auth_user()['full_name'] ?? auth_user()['username']) ?>
                             <span class="badge bg-secondary ms-1"><?= ucfirst(auth_user()['role']) ?></span>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="<?= base_url('index.php?action=logout') ?>">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout
                             </a></li>
@@ -46,7 +46,7 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar position-fixed mt-5 collapse">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -75,6 +75,14 @@
                                 <i class="fas fa-file-import me-2"></i>Import/Export
                             </a>
                         </li>
+                        <?php if (in_array(auth_user()['role'], ['admin', 'manager'])): ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?= ($_GET['action'] ?? '') === 'meeting_clients' ? 'active' : '' ?>"
+                               href="<?= base_url('index.php?action=meeting_clients') ?>">
+                                <i class="fas fa-handshake me-2"></i>Meetings
+                            </a>
+                        </li>
+                        <?php endif; ?>
                         <?php if (auth_user()['role'] === 'admin'): ?>
                         <li class="nav-item">
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'users' ? 'active' : '' ?>" 
@@ -91,7 +99,7 @@
                         <li class="nav-item">
                             <a class="nav-link <?= ($_GET['action'] ?? '') === 'lead_sources' ? 'active' : '' ?>" 
                                href="<?= base_url('index.php?action=lead_sources') ?>">
-                                <i class="fas fa-source me-2"></i>Lead Sources
+                                <i class="fas fa-globe me-2"></i>Lead Sources
                             </a>
                         </li>
                         <li class="nav-item">
@@ -118,5 +126,5 @@
             </nav>
 
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content mt-5">
     <?php endif; ?>

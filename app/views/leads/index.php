@@ -114,7 +114,7 @@
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="fas fa-search me-2"></i>Search
                 </button>
-                <a href="index.php?action=leads" class="btn btn-outline-secondary">
+                <a href="index.php?action=reset_leads_filters" class="btn btn-outline-secondary">
                     <i class="fas fa-times me-2"></i>Clear
                 </a>
             </div>
@@ -138,12 +138,10 @@
             </button>
             <button type="button" class="btn btn-sm btn-info me-2" id="bulkAssignBtn" disabled>
                 <i class="fas fa-user-plus me-1"></i>Assign Selected
-            </button>
-            <?php if (auth_user()['role'] === 'admin'): ?>
+            </button> 
                 <button type="button" class="btn btn-sm btn-danger me-2" id="bulkDeleteBtn" disabled>
                     <i class="fas fa-trash me-1"></i>Delete Selected
                 </button>
-            <?php endif; ?>
             <a href="index.php?action=export_csv&<?= http_build_query(array_merge($filters ?? [], ['search' => $search ?? ''])) ?>" class="btn btn-sm btn-outline-success me-2">
                 <i class="fas fa-download me-1"></i>Export CSV
             </a>
@@ -154,10 +152,15 @@
     </div>
     <div class="card-body p-0">
         <?php if (!empty($leads)): ?>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
+            <div class="table-scroll-wrapper">
+                <div class="table-scroll-top"></div>
+                <div class="table-responsive mt-2 table-scroll-bottom">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                        <tr> 
+
+
+                        
                             <th>
                                 <input type="checkbox" id="selectAll" class="form-check-input">
                             </th>
@@ -361,7 +364,8 @@
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
-                </table>
+                    </table>
+                </div>
             </div>
             <?php if (!empty($totalPages) && $totalPages > 1): ?>
             <div class="p-3 d-flex justify-content-between align-items-center">
@@ -609,10 +613,93 @@
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
+
+/* Table scroll wrapper for top scrollbar */
+.table-scroll-wrapper {
+    position: relative;
+}
+
+.table-scroll-top {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 20px;
+    margin-bottom: -20px;
+    position: relative;
+    z-index: 10;
+}
+
+.table-scroll-bottom {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.table-scroll-top::-webkit-scrollbar,
+.table-scroll-bottom::-webkit-scrollbar {
+    height: 12px;
+}
+
+.table-scroll-top::-webkit-scrollbar-track,
+.table-scroll-bottom::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+}
+
+.table-scroll-top::-webkit-scrollbar-thumb,
+.table-scroll-bottom::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 6px;
+}
+
+.table-scroll-top::-webkit-scrollbar-thumb:hover,
+.table-scroll-bottom::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Synchronize top and bottom scrollbars
+    const tableScrollWrapper = document.querySelector('.table-scroll-wrapper');
+    if (tableScrollWrapper) {
+        const topScroll = tableScrollWrapper.querySelector('.table-scroll-top');
+        const bottomScroll = tableScrollWrapper.querySelector('.table-scroll-bottom');
+        
+        if (topScroll && bottomScroll) {
+            // Create a dummy div in top scroll to match table width
+            const table = bottomScroll.querySelector('table');
+            if (table) {
+                const dummyDiv = document.createElement('div');
+                dummyDiv.style.width = table.offsetWidth + 'px';
+                dummyDiv.style.height = '1px';
+                topScroll.appendChild(dummyDiv);
+                
+                // Synchronize scrolling
+                let isScrolling = false;
+                
+                topScroll.addEventListener('scroll', function() {
+                    if (!isScrolling) {
+                        isScrolling = true;
+                        bottomScroll.scrollLeft = topScroll.scrollLeft;
+                        setTimeout(() => { isScrolling = false; }, 10);
+                    }
+                });
+                
+                bottomScroll.addEventListener('scroll', function() {
+                    if (!isScrolling) {
+                        isScrolling = true;
+                        topScroll.scrollLeft = bottomScroll.scrollLeft;
+                        setTimeout(() => { isScrolling = false; }, 10);
+                    }
+                });
+                
+                // Update dummy div width on window resize
+                window.addEventListener('resize', function() {
+                    dummyDiv.style.width = table.offsetWidth + 'px';
+                });
+            }
+        }
+    }
+    
     const selectAllCheckbox = document.getElementById('selectAll');
     const leadCheckboxes = document.querySelectorAll('.lead-checkbox');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');

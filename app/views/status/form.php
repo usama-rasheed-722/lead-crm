@@ -32,6 +32,14 @@
                                placeholder="e.g., New Lead, Email Contact, Responded" required>
                         <div class="form-text">Enter a descriptive name for the status.</div>
                     </div>
+
+                    <div class="mb-3">
+                        <div for="sequence" class="form-label">
+                            Sequence: <input class="form-control" type="number" id="sequence" name="sequence" 
+                                   value="<?= ($status['sequence'] ?? 0) ?>">
+                        </div>
+                        <div class="form-text">Sequence number for ordering statuses.</div>
+                    </div>
                     
                     <div class="mb-3">
                         <div class="form-check">

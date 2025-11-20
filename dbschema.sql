@@ -137,6 +137,32 @@ CREATE TABLE `lead_notes` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `client_meetings`
+--
+
+CREATE TABLE `client_meetings` (
+  `id` int(11) NOT NULL,
+  `client_name` varchar(150) NOT NULL,
+  `client_email` varchar(150) NOT NULL,
+  `client_phone` varchar(50) DEFAULT NULL,
+  `company_name` varchar(150) NOT NULL,
+  `business_model` text NOT NULL,
+  `meeting_agenda` text NOT NULL,
+  `preferred_date` date NOT NULL,
+  `preferred_time` time NOT NULL,
+  `timezone` varchar(100) NOT NULL,
+  `preferred_datetime_utc` datetime NOT NULL,
+  `client_feedback` text DEFAULT NULL,
+  `client_notes` text DEFAULT NULL,
+  `admin_notes` text DEFAULT NULL,
+  `status` enum('new','scheduled','completed','cancelled') NOT NULL DEFAULT 'new',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `lead_quota_assignments`
 --
 
@@ -295,6 +321,16 @@ ALTER TABLE `lead_notes`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `client_meetings`
+--
+ALTER TABLE `client_meetings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_client_meetings_datetime` (`preferred_datetime_utc`),
+  ADD KEY `idx_client_meetings_date` (`preferred_date`),
+  ADD KEY `idx_client_meetings_timezone` (`timezone`),
+  ADD KEY `idx_client_meetings_status` (`status`);
+
+--
 -- Indexes for table `lead_quota_assignments`
 --
 ALTER TABLE `lead_quota_assignments`
@@ -373,6 +409,12 @@ ALTER TABLE `lead_assignments`
 -- AUTO_INCREMENT for table `lead_notes`
 --
 ALTER TABLE `lead_notes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `client_meetings`
+--
+ALTER TABLE `client_meetings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

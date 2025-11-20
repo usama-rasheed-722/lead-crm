@@ -24,7 +24,7 @@ class LeadModel extends Model {
             tier, lead_status, insta, social_profile, address, description_information,
             whatsapp, next_step, other, status_id, country, sdr_name
         )
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) 
         ");
         
         $stmt->execute([
@@ -282,7 +282,7 @@ lead_owner=?, contact_name=?, job_title=?, industry=?, lead_source_id=?, tier=?,
         if(!$conds) return 'incomplete';
 
         $sql = 'SELECT id FROM leads WHERE ('.implode(' OR ',$conds).')';
-        if($excludeId) { $sql .= ' AND id != '.(int)$excludeId; }
+        if($excludeId) { $sql .= ' AND id != '.(int)$excludeId.' AND deleted_at IS NULL'; }
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $row = $stmt->fetch();

@@ -25,21 +25,33 @@ class LeadAssignmentController extends Controller {
     public function assignedLeads() {
         require_role(['admin', 'sdr', 'manager']);
         
-        $search = $_GET['search'] ?? '';
-        $filters = [
-            'assigned_by' => $_GET['assigned_by'] ?? '',
-            'status_id' => $_GET['status_id'] ?? '',
-            'assigned_date_from' => $_GET['assigned_date_from'] ?? '',
-            'assigned_date_to' => $_GET['assigned_date_to'] ?? '',
-            'assigned_to' => $_GET['assigned_to'] ?? '',
-            'sdr_id' => $_GET['sdr_id'] ?? '',
-            'duplicate_status' => $_GET['duplicate_status'] ?? '',
-            'date_from' => $_GET['date_from'] ?? '',
-            'date_to' => $_GET['date_to'] ?? '',
-            'lead_source_id' => $_GET['lead_source_id'] ?? '',
-            'field_type' => $_GET['field_type'] ?? '',
-            'field_value' => $_GET['field_value'] ?? ''
+        // Handle search parameter (separate from filters)
+        if (isset($_GET['search'])) {
+            $_SESSION['filters']['assigned_leads']['search'] = $_GET['search'];
+            $search = $_GET['search'];
+        } elseif (isset($_SESSION['filters']['assigned_leads']['search'])) {
+            $search = $_SESSION['filters']['assigned_leads']['search'];
+        } else {
+            $search = '';
+        }
+        
+        // Get filters from session or GET parameters
+        $defaultFilters = [
+            'assigned_by' => '',
+            'status_id' => '',
+            'assigned_date_from' => '',
+            'assigned_date_to' => '',
+            'assigned_to' => '',
+            'sdr_id' => '',
+            'duplicate_status' => '',
+            'date_from' => '',
+            'date_to' => '',
+            'lead_source_id' => '',
+            'field_type' => '',
+            'field_value' => ''
         ];
+        
+        $filters = $this->getFilters('assigned_leads', $defaultFilters);
 
         // Role-based filtering: SDRs can only see leads assigned to them
         $currentUser = auth_user();
@@ -404,6 +416,17 @@ class LeadAssignmentController extends Controller {
 
         fclose($output);
         exit;
+    }
+    
+    /**
+     * Reset filters for assigned leads page
+     */
+    public function resetAssignedLeadsFilters() {
+        $this->resetFilters('assigned_leads');
+        if (isset($_SESSION['filters']['assigned_leads_search'])) {
+            unset($_SESSION['filters']['assigned_leads_search']);
+        }
+        $this->redirect('index.php?action=assigned_leads');
     }
 }
 ?>

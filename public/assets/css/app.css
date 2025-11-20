@@ -167,6 +167,108 @@ body {
     color: #6c757d;
 }
 
+.meetings-table td {
+    vertical-align: top;
+}
+
+.meetings-table td .small {
+    line-height: 1.4;
+}
+
+.meeting-status-select {
+    min-width: 160px;
+}
+
+.status-spinner,
+.status-feedback {
+    transition: opacity 0.2s ease;
+}
+
+.meeting-portal-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, rgba(44,62,80,0.95), rgba(52,152,219,0.85));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 15px;
+}
+
+.meeting-portal-wrapper {
+    width: 100%;
+    max-width: 960px;
+}
+
+.meeting-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.meeting-steps {
+    position: relative;
+}
+
+.meeting-step {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    display: none;
+}
+
+.meeting-step.active {
+    opacity: 1;
+    transform: translateY(0);
+    display: block;
+}
+
+.meeting-step-branding h1 {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.meeting-step-branding .lead {
+    font-size: 1.1rem;
+}
+
+.brand-logo-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(52, 152, 219, 0.08);
+    border-radius: 50%;
+    width: 160px;
+    height: 160px;
+}
+
+.brand-logo {
+    max-width: 110px;
+}
+
+.meeting-form .form-control,
+.meeting-form .form-select {
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.meeting-form textarea {
+    resize: vertical;
+}
+
+.meeting-next-btn {
+    border-radius: 999px;
+}
+
+.meeting-step.done {
+    display: none !important;
+}
+
+.badge.bg-primary-subtle {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: #1b4f72;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         min-height: auto;
@@ -179,4 +281,19 @@ body {
     .table-responsive {
         font-size: 0.9em;
     }
+
+    .meeting-card {
+        padding: 30px 20px;
+        border-radius: 16px;
+    }
+
+    .brand-logo-wrapper {
+        width: 120px;
+        height: 120px;
+    }
+
+    .brand-logo {
+        max-width: 80px;
+    }
+}
 }

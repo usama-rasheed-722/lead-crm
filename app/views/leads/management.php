@@ -60,7 +60,7 @@
                     <button type="submit" class="btn btn-primary me-2">
                         <i class="fas fa-search me-2"></i>Filter
                     </button>
-                    <a href="index.php?action=leads_management" class="btn btn-outline-secondary">
+                    <a href="index.php?action=reset_leads_management_filters" class="btn btn-outline-secondary">
                         <i class="fas fa-times me-2"></i>Clear
                     </a>
                 </div>

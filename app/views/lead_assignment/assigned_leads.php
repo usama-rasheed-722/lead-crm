@@ -222,7 +222,7 @@
                 <button type="submit" class="btn btn-primary me-2">
                     <i class="fas fa-search me-2"></i>Search
                         </button>
-                        <a href="index.php?action=assigned_leads" class="btn btn-outline-secondary">
+                        <a href="index.php?action=reset_assigned_leads_filters" class="btn btn-outline-secondary">
                     <i class="fas fa-times me-2"></i>Clear
                         </a>
                 </div>

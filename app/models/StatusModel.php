@@ -23,26 +23,26 @@ class StatusModel extends Model {
     }
 
     // Create new status
-    public function create($name, $restrictBulkUpdate = false, $isDefault = false) {
+    public function create($name, $restrictBulkUpdate = false, $isDefault = false, $sequence = 0) {
         // If this is being set as default, unset any existing default
         if ($isDefault) {
             $this->unsetDefaultStatus();
         }
         
-        $stmt = $this->pdo->prepare('INSERT INTO status (name, restrict_bulk_update, is_default) VALUES (?, ?, ?)');
-        $stmt->execute([$name, $restrictBulkUpdate ? 1 : 0, $isDefault ? 1 : 0]);
+        $stmt = $this->pdo->prepare('INSERT INTO status (name, restrict_bulk_update, is_default, sequence) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$name, $restrictBulkUpdate ? 1 : 0, $isDefault ? 1 : 0, $sequence]);
         return $this->pdo->lastInsertId();
     }
 
     // Update status
-    public function update($id, $name, $restrictBulkUpdate = false, $isDefault = false) {
+    public function update($id, $name, $restrictBulkUpdate = false, $isDefault = false, $sequence = 0) {
         // If this is being set as default, unset any existing default
         if ($isDefault) {
             $this->unsetDefaultStatus();
         }
         
-        $stmt = $this->pdo->prepare('UPDATE status SET name = ?, restrict_bulk_update = ?, is_default = ? WHERE id = ?');
-        return $stmt->execute([$name, $restrictBulkUpdate ? 1 : 0, $isDefault ? 1 : 0, $id]);
+        $stmt = $this->pdo->prepare('UPDATE status SET name = ?, restrict_bulk_update = ?, is_default = ?, sequence = ? WHERE id = ?');
+        return $stmt->execute([$name, $restrictBulkUpdate ? 1 : 0, $isDefault ? 1 : 0, $sequence, $id]);
     }
 
     // Delete status

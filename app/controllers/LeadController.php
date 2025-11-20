@@ -37,19 +37,32 @@ class LeadController extends Controller {
     // List all leads with search and filters
     public function index() {
         $user = auth_user();
-        $search = $_GET['search'] ?? '';
-        $filters = [
-            'sdr_id' => $_GET['sdr_id'] ?? '',
-            'duplicate_status' => $_GET['duplicate_status'] ?? '',
-            'date_from' => $_GET['date_from'] ?? '',
-            'date_to' => $_GET['date_to'] ?? '',
-            'lead_source_id' => $_GET['lead_source_id'] ?? '',
-            'status_id' => $_GET['status_id'] ?? '',
-            'field_type' => $_GET['field_type'] ?? '',
-            'field_value' => $_GET['field_value'] ?? ''
+        
+        // Handle search parameter (separate from filters)
+        if (isset($_GET['search'])) {
+            $_SESSION['filters']['leads_search'] = $_GET['search'];
+            $search = $_GET['search'];
+        } elseif (isset($_SESSION['filters']['leads_search'])) {
+            $search = $_SESSION['filters']['leads_search'];
+        } else {
+            $search = '';
+        }
+        
+        // Get filters from session or GET parameters
+        $defaultFilters = [
+            'sdr_id' => '',
+            'duplicate_status' => '',
+            'date_from' => '',
+            'date_to' => '',
+            'lead_source_id' => '',
+            'status_id' => '',
+            'field_type' => '',
+            'field_value' => ''
         ];
         
-        // Remove empty filters
+        $filters = $this->getFilters('leads', $defaultFilters);
+        
+        // Remove empty filters for query building
         $filters = array_filter($filters);
         
         $page = (int)($_GET['page'] ?? 1);
@@ -322,9 +335,9 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->delete($id);
-            $this->redirect('index.php?action=leads&success=' . urlencode('Lead moved to trash'));
+            $this->redirect('index.php?action=leads', ['success' => 'Lead moved to trash']);
         } catch (Exception $e) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Failed to delete lead'));
+            $this->redirect('index.php?action=leads', ['error' => 'Failed to delete lead']);
         }
     }
     
@@ -359,9 +372,9 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->restore($id);
-            $this->redirect('index.php?action=trash&success=' . urlencode('Lead restored successfully'));
+            $this->redirect('index.php?action=trash', ['success' => 'Lead restored successfully']);
         } catch (Exception $e) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('Failed to restore lead'));
+            $this->redirect('index.php?action=trash', ['error' => 'Failed to restore lead']);
         }
     }
     
@@ -375,9 +388,9 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->hardDelete($id);
-            $this->redirect('index.php?action=trash&success=' . urlencode('Lead permanently deleted'));
+            $this->redirect('index.php?action=trash', ['success' => 'Lead permanently deleted']);
         } catch (Exception $e) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('Failed to permanently delete lead'));
+            $this->redirect('index.php?action=trash', ['error' => 'Failed to permanently delete lead']);
         }
     }
     
@@ -391,12 +404,12 @@ class LeadController extends Controller {
         
         $leadIds = $_POST['lead_ids'] ?? '';
         if (empty($leadIds)) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('No leads selected for deletion'));
+            $this->redirect('index.php?action=trash', ['error' => 'No leads selected for deletion']);
         }
         
         $ids = array_filter(array_map('intval', explode(',', $leadIds)));
         if (empty($ids)) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('Invalid lead IDs provided'));
+            $this->redirect('index.php?action=trash', ['error' => 'Invalid lead IDs provided']);
         }
         
         try {
@@ -410,11 +423,11 @@ class LeadController extends Controller {
             $deletedCount = $stmt->rowCount();
             $pdo->commit();
             
-            $this->redirect("index.php?action=trash&success=" . urlencode("Successfully permanently deleted {$deletedCount} lead(s)"));
+            $this->redirect("index.php?action=trash", ['success' => "Successfully permanently deleted {$deletedCount} lead(s)"]);
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $this->redirect("index.php?action=trash&error=" . urlencode('Failed to permanently delete leads: ' . $e->getMessage()));
+            $this->redirect("index.php?action=trash", ['error' => 'Failed to permanently delete leads: ' . $e->getMessage()]);
         }
     }
     
@@ -428,12 +441,12 @@ class LeadController extends Controller {
         
         $leadIds = $_POST['lead_ids'] ?? '';
         if (empty($leadIds)) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('No leads selected for restoration'));
+            $this->redirect('index.php?action=trash', ['error' => 'No leads selected for restoration']);
         }
         
         $ids = array_filter(array_map('intval', explode(',', $leadIds)));
         if (empty($ids)) {
-            $this->redirect('index.php?action=trash&error=' . urlencode('Invalid lead IDs provided'));
+            $this->redirect('index.php?action=trash', ['error' => 'Invalid lead IDs provided']);
         }
         
         try {
@@ -447,11 +460,11 @@ class LeadController extends Controller {
             $restoredCount = $stmt->rowCount();
             $pdo->commit();
             
-            $this->redirect("index.php?action=trash&success=" . urlencode("Successfully restored {$restoredCount} lead(s)"));
+            $this->redirect("index.php?action=trash", ['success' => "Successfully restored {$restoredCount} lead(s)"]);
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $this->redirect("index.php?action=trash&error=" . urlencode('Failed to restore leads: ' . $e->getMessage()));
+            $this->redirect("index.php?action=trash", ['error' => 'Failed to restore leads: ' . $e->getMessage()]);
         }
     }
     
@@ -476,16 +489,14 @@ class LeadController extends Controller {
         
         try {
             $sdrNumber = generateSDRNumber($id, $lead['sdr_id']);
-            $this->redirect("index.php?action=lead_view&id={$id}&success=" . urlencode("SDR number generated: {$sdrNumber}"));
+            $this->redirect("index.php?action=lead_view&id={$id}", ['success' => "SDR number generated: {$sdrNumber}"]);
         } catch (Exception $e) {
-            $this->redirect("index.php?action=lead_view&id={$id}&error=" . urlencode('Failed to generate SDR number'));
+            $this->redirect("index.php?action=lead_view&id={$id}", ['error' => 'Failed to generate SDR number']);
         }
     }
     
- 
-    // Bulk delete leads
     public function bulkDelete() {
-        require_role(['admin']); // Only admins can do bulk operations
+        require_role(['admin','sdr','manager']); // Only admins can do bulk operations
         
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('index.php?action=leads');
@@ -493,12 +504,12 @@ class LeadController extends Controller {
         
         $leadIds = $_POST['lead_ids'] ?? '';
         if (empty($leadIds)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected for deletion'));
+            $this->redirect('index.php?action=leads', ['error' => 'No leads selected for deletion']);
         }
         
         $ids = array_filter(array_map('intval', explode(',', $leadIds)));
         if (empty($ids)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+            $this->redirect('index.php?action=leads', ['error' => 'Invalid lead IDs provided']);
         }
         
         try {
@@ -506,17 +517,17 @@ class LeadController extends Controller {
             $pdo->beginTransaction();
             
             $placeholders = str_repeat('?,', count($ids) - 1) . '?';
-            $stmt = $pdo->prepare("DELETE FROM leads WHERE id IN ($placeholders)");
+            $stmt = $pdo->prepare("UPDATE leads SET deleted_at = NOW() WHERE id IN ($placeholders)");
             $stmt->execute($ids);
             
             $deletedCount = $stmt->rowCount();
             $pdo->commit();
             
-            $this->redirect("index.php?action=leads&success=" . urlencode("Successfully deleted {$deletedCount} lead(s)"));
+            $this->redirect("index.php?action=leads", ['success' => "Successfully deleted {$deletedCount} lead(s)"]);
             
         } catch (Exception $e) {
             $pdo->rollBack();
-            $this->redirect("index.php?action=leads&error=" . urlencode('Failed to delete leads: ' . $e->getMessage()));
+            $this->redirect("index.php?action=leads", ['error' => 'Failed to delete leads: ' . $e->getMessage()]);
         }
     }
     
@@ -576,7 +587,7 @@ class LeadController extends Controller {
         $currentSdrId = $user['sdr_id'] ?? $user['id'];
         $duplicateIds = $_POST['duplicate_ids'] ?? [];
         if (empty($duplicateIds)) {
-            $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('No duplicates selected for merging'));
+            $this->redirect("index.php?action=find_duplicates&id={$id}", ['error' => 'No duplicates selected for merging']);
         }
         
         try {
@@ -585,28 +596,32 @@ class LeadController extends Controller {
                 foreach ($duplicateIds as $dupId) {
                     $dupLead = $this->leadModel->getById($dupId);
                     if (!$dupLead || (string)$dupLead['sdr_id'] !== (string)$currentSdrId) {
-                        $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('You can only merge duplicates that belong to you'));
+                        $this->redirect("index.php?action=find_duplicates&id={$id}", ['error' => 'You can only merge duplicates that belong to you']);
                     }
                 }
             }
 
             // Pass SDR id so the primary lead retains/gets assigned to the merging SDR
             $this->leadModel->mergeDuplicates($id, $duplicateIds, $currentSdrId);
-            $this->redirect("index.php?action=lead_view&id={$id}&success=" . urlencode('Successfully merged ' . count($duplicateIds) . ' duplicate lead(s)'));
+            $this->redirect("index.php?action=lead_view&id={$id}", ['success' => 'Successfully merged ' . count($duplicateIds) . ' duplicate lead(s)']);
         } catch (Exception $e) {
-            $this->redirect("index.php?action=find_duplicates&id={$id}&error=" . urlencode('Failed to merge duplicates: ' . $e->getMessage()));
+            $this->redirect("index.php?action=find_duplicates&id={$id}", ['error' => 'Failed to merge duplicates: ' . $e->getMessage()]);
         }
     }
     
     // New leads management page with specific columns
     public function leadsManagement() {
         $user = auth_user();
-        $filters = [
-            'sdr_id' => $_GET['sdr_id'] ?? '',
-            'status_id' => $_GET['status_id'] ?? ''
+        
+        // Get filters from session or GET parameters
+        $defaultFilters = [
+            'sdr_id' => '',
+            'status_id' => ''
         ];
         
-        // Remove empty filters
+        $filters = $this->getFilters('leads_management', $defaultFilters);
+        
+        // Remove empty filters for query building
         $filters = array_filter($filters);
         
         // Role-based filtering
@@ -652,24 +667,24 @@ class LeadController extends Controller {
         $newStatusId = (int)($_POST['new_status_id'] ?? 0);
         
         if (empty($leadIds) || empty($newStatusId)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected or status not specified'));
+            $this->redirect('index.php?action=leads', ['error' => 'No leads selected or status not specified']);
         }
         
         $ids = array_filter(array_map('intval', explode(',', $leadIds)));
         if (empty($ids)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+            $this->redirect('index.php?action=leads', ['error' => 'Invalid lead IDs provided']);
         }
         
         // Get the status name for checking restrictions
         $statusModel = new StatusModel();
         $newStatus = $statusModel->getById($newStatusId);
         if (!$newStatus) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid status selected'));
+            $this->redirect('index.php?action=leads', ['error' => 'Invalid status selected']);
         }
         
         // Check if the target status restricts bulk updates
         if ($statusModel->restrictsBulkUpdateByName($newStatus['name'])) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Bulk status update is not allowed for the selected status. Please update leads individually.'));
+            $this->redirect('index.php?action=leads', ['error' => 'Bulk status update is not allowed for the selected status. Please update leads individually.']);
         }
         
         // Check permissions for each lead
@@ -677,7 +692,7 @@ class LeadController extends Controller {
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
                 if (!$lead || !$this->canAccessLead($lead, $user)) {
-                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
+                    $this->redirect('index.php?action=leads', ['error' => 'Access denied for one or more leads. You can only update leads assigned to you.']);
                 }
             }
         }
@@ -694,7 +709,7 @@ class LeadController extends Controller {
             
             // Validate required fields
             if ($field['is_required'] && empty($fieldValue)) {
-                $this->redirect('index.php?action=leads&error=' . urlencode("Field '{$field['field_label']}' is required"));
+                $this->redirect('index.php?action=leads', ['error' => "Field '{$field['field_label']}' is required"]);
             }
             
             $customFieldsData[$fieldName] = $fieldValue;
@@ -703,9 +718,9 @@ class LeadController extends Controller {
         try {
             // Use the new bulk update method with single transaction and single query
             $this->leadModel->bulkUpdateStatusWithCustomFields($ids, $newStatusId, $user['id'], $customFieldsData);
-            $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
+            $this->redirect('index.php?action=leads', ['success' => "Successfully updated status for " . count($ids) . " lead(s)"]);
         } catch (Exception $e) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
+            $this->redirect('index.php?action=leads', ['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }
 
@@ -720,17 +735,17 @@ class LeadController extends Controller {
         $newStatusId = (int)($_POST['new_status_id'] ?? 0);
         
         if (empty($leadId) || empty($newStatusId)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead ID or status not specified'));
+            $this->redirect('index.php?action=leads', ['error' => 'Invalid lead ID or status not specified']);
         }
         
         // Check permissions
         $lead = $this->leadModel->getById($leadId);
         if (!$lead) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
+            $this->redirect('index.php?action=leads', ['error' => 'Lead not found']);
         }
         
         if (!$this->canAccessLead($lead, $user)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
+            $this->redirect('index.php?action=leads', ['error' => 'Access denied']);
         }
         
         // Get custom fields for the new status
@@ -746,7 +761,7 @@ class LeadController extends Controller {
             
             // Validate required fields
             if ($field['is_required'] && empty($fieldValue)) {
-                $this->redirect("index.php?action=lead_view&id={$leadId}&error=" . urlencode("Field '{$field['field_label']}' is required"));
+                $this->redirect("index.php?action=lead_view&id={$leadId}", ['error' => "Field '{$field['field_label']}' is required"]);
             }
             
             $customFieldsData[$fieldName] = $fieldValue;
@@ -754,9 +769,9 @@ class LeadController extends Controller {
         
         try {
             $this->leadModel->updateStatusWithCustomFields($leadId, $newStatusId, $user['id'], $customFieldsData);
-            $this->redirect("index.php?action=lead_status_history&id={$leadId}&success=" . urlencode('Status updated successfully'));
+            $this->redirect("index.php?action=lead_status_history&id={$leadId}", ['success' => 'Status updated successfully']);
         } catch (Exception $e) {
-            $this->redirect("index.php?action=lead_status_history&id={$leadId}&error=" . urlencode('Failed to update status: ' . $e->getMessage()));
+            $this->redirect("index.php?action=lead_status_history&id={$leadId}", ['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }
 
@@ -797,18 +812,18 @@ class LeadController extends Controller {
         $newStatus = trim($_POST['new_status'] ?? '');
         
         if (empty($leadIds) || empty($newStatus)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('No leads selected or status not specified'));
+            $this->redirect('index.php?action=leads', ['error' => 'No leads selected or status not specified']);
         }
         
         $ids = array_filter(array_map('intval', explode(',', $leadIds)));
         if (empty($ids)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Invalid lead IDs provided'));
+            $this->redirect('index.php?action=leads', ['error' => 'Invalid lead IDs provided']);
         }
         
         // Check if the target status restricts bulk updates
         $statusModel = new StatusModel();
         if ($statusModel->restrictsBulkUpdateByName($newStatus)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Bulk status update is not allowed for the selected status. Please update leads individually.'));
+            $this->redirect('index.php?action=leads', ['error' => 'Bulk status update is not allowed for the selected status. Please update leads individually.']);
         }
         
         // Check permissions for each lead
@@ -816,7 +831,7 @@ class LeadController extends Controller {
             foreach ($ids as $leadId) {
                 $lead = $this->leadModel->getById($leadId);
                 if (!$lead || !$this->canAccessLead($lead, $user)) {
-                    $this->redirect('index.php?action=leads&error=' . urlencode('Access denied for one or more leads. You can only update leads assigned to you.'));
+                    $this->redirect('index.php?action=leads', ['error' => 'Access denied for one or more leads. You can only update leads assigned to you.']);
                 }
             }
         }
@@ -833,7 +848,7 @@ class LeadController extends Controller {
             
             // Validate required fields
             if ($field['is_required'] && empty($fieldValue)) {
-                $this->redirect('index.php?action=leads&error=' . urlencode("Field '{$field['field_label']}' is required"));
+                $this->redirect('index.php?action=leads', ['error' => "Field '{$field['field_label']}' is required"]);
             }
             
             $customFieldsData[$fieldName] = $fieldValue;
@@ -848,19 +863,34 @@ class LeadController extends Controller {
             }
             
             $this->pdo->commit();
-            $this->redirect('index.php?action=leads&success=' . urlencode("Successfully updated status for " . count($ids) . " lead(s)"));
+            $this->redirect('index.php?action=leads', ['success' => "Successfully updated status for " . count($ids) . " lead(s)"]);
         } catch (Exception $e) {
             $this->pdo->rollBack();
-            $this->redirect('index.php?action=leads&error=' . urlencode('Failed to update status: ' . $e->getMessage()));
+            $this->redirect('index.php?action=leads', ['error' => 'Failed to update status: ' . $e->getMessage()]);
         }
     }
 
+    // Reset filters for leads page
+    public function resetLeadsFilters() {
+        $this->resetFilters('leads');
+        if (isset($_SESSION['filters']['leads_search'])) {
+            unset($_SESSION['filters']['leads_search']);
+        }
+        $this->redirect('index.php?action=leads');
+    }
+    
+    // Reset filters for leads management page
+    public function resetLeadsManagementFilters() {
+        $this->resetFilters('leads_management');
+        $this->redirect('index.php?action=leads_management');
+    }
+    
     // View full page status history for a lead
     public function statusHistory() {
         $leadId = $_GET['id'] ?? null;
         
         if (!$leadId) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Lead ID required'));
+            $this->redirect('index.php?action=leads', ['error' => 'Lead ID required']);
         }
         
         $user = auth_user();
@@ -868,12 +898,12 @@ class LeadController extends Controller {
         // Get lead details first
         $lead = $this->leadModel->getById($leadId);
         if (!$lead) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Lead not found'));
+            $this->redirect('index.php?action=leads', ['error' => 'Lead not found']);
         }
         
         // Check permissions
         if (!$this->canAccessLead($lead, $user)) {
-            $this->redirect('index.php?action=leads&error=' . urlencode('Access denied'));
+            $this->redirect('index.php?action=leads', ['error' => 'Access denied']);
         }
         
         // Get status history

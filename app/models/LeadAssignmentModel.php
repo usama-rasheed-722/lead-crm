@@ -274,7 +274,7 @@ FROM
             LEFT JOIN users u2 ON l.assigned_by = u2.id
             LEFT JOIN lead_sources ls ON l.lead_source_id = ls.id
             LEFT JOIN lqa ON l.id = lqa.lead_id
-            WHERE $whereClause
+            WHERE $whereClause and l.deleted_at IS NULL
             ORDER BY l.assigned_at DESC
             LIMIT ? OFFSET ?
         ");

@@ -38,6 +38,7 @@ class StatusController extends Controller {
         }
         
         $name = trim($_POST['name'] ?? '');
+        $sequence = (int)($_POST['sequence'] ?? 0);
         $restrictBulkUpdate = isset($_POST['restrict_bulk_update']);
         $isDefault = isset($_POST['is_default']);
         
@@ -61,7 +62,7 @@ class StatusController extends Controller {
         }
         
         try {
-            $this->statusModel->create($name, $restrictBulkUpdate, $isDefault);
+            $this->statusModel->create($name, $restrictBulkUpdate, $isDefault, $sequence);
             $this->redirect('index.php?action=status_management&success=' . urlencode('Status created successfully'));
         } catch (Exception $e) {
             $this->view('status/form', [
@@ -109,6 +110,7 @@ class StatusController extends Controller {
         }
         
         $name = trim($_POST['name'] ?? '');
+        $sequence = (int)($_POST['sequence'] ?? 0);
         $restrictBulkUpdate = isset($_POST['restrict_bulk_update']);
         $isDefault = isset($_POST['is_default']);
         
@@ -134,7 +136,7 @@ class StatusController extends Controller {
         }
         
         try {
-            $this->statusModel->update($id, $name, $restrictBulkUpdate, $isDefault);
+            $this->statusModel->update($id, $name, $restrictBulkUpdate, $isDefault, $sequence);
             $this->redirect('index.php?action=status_management&success=' . urlencode('Status updated successfully'));
         } catch (Exception $e) {
             $this->view('status/form', [

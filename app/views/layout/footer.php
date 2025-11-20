@@ -41,6 +41,79 @@
                 });
             });
         });
+
+        // Meeting status updates (AJAX)
+        document.addEventListener('DOMContentLoaded', function () {
+            const statusSelects = document.querySelectorAll('.meeting-status-select');
+            if (!statusSelects.length) {
+                return;
+            }
+
+            statusSelects.forEach(function (select) {
+                select.addEventListener('change', function () {
+                    const meetingId = this.getAttribute('data-id');
+                    const newStatus = this.value;
+                    const row = this.closest('tr');
+                    const spinner = row ? row.querySelector('.status-spinner') : null;
+                    const feedback = row ? row.querySelector('.status-feedback') : null;
+
+                    if (spinner) {
+                        spinner.classList.remove('d-none');
+                    }
+                    if (feedback) {
+                        feedback.classList.add('d-none');
+                        feedback.textContent = '';
+                    }
+
+                    const formData = new FormData();
+                    formData.append('meeting_id', meetingId);
+                    formData.append('status', newStatus);
+
+                    fetch('index.php?action=meeting_update_status', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: formData
+                    })
+                        .then(function (response) {
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            if (spinner) {
+                                spinner.classList.add('d-none');
+                            }
+                            if (!feedback) {
+                                return;
+                            }
+
+                            if (data && data.success) {
+                                feedback.textContent = 'Status updated';
+                                feedback.classList.remove('text-danger');
+                                feedback.classList.add('text-success');
+                            } else {
+                                feedback.textContent = data.message || 'Failed to update status';
+                                feedback.classList.remove('text-success');
+                                feedback.classList.add('text-danger');
+                            }
+                            feedback.classList.remove('d-none');
+
+                            setTimeout(function () {
+                                feedback.classList.add('d-none');
+                            }, 3000);
+                        })
+                        .catch(function () {
+                            if (spinner) {
+                                spinner.classList.add('d-none');
+                            }
+                            if (feedback) {
+                                feedback.textContent = 'Unexpected error. Please retry.';
+                                feedback.classList.remove('text-success');
+                                feedback.classList.add('text-danger');
+                                feedback.classList.remove('d-none');
+                            }
+                        });
+                });
+            });
+        });
     </script>
 </body>
 </html>

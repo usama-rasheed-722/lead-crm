@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80">
+  <defs>
+    <linearGradient id="alifcodeGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#2c3e50"/>
+      <stop offset="100%" stop-color="#3498db"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="80" rx="16" fill="url(#alifcodeGradient)"/>
+  <g fill="#ffffff" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-weight="600">
+    <text x="32" y="50" font-size="34">ALIF</text>
+    <text x="120" y="50" font-size="34" fill="#ecf0f1">CODE</text>
+  </g>
+  <circle cx="200" cy="40" r="18" fill="#ffffff" opacity="0.15"/>
+  <path d="M194 48l7-16 7 16h-5l-2-4-2 4h-5z" fill="#ffffff"/>
+</svg>
+
